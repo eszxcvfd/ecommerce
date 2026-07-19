@@ -1,3 +1,9 @@
+# Agent and local tooling state
+.agents/
+.pi/
+.scratch/
+skills-lock.json
+
 # Go binaries
 src/api/testserver
 
