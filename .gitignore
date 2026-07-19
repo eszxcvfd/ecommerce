@@ -1,5 +1,11 @@
-# Agent and local tooling state
-.agents/
-.pi/
-.scratch/
-skills-lock.json
+# Go binaries
+src/api/testserver
+
+# Nuxt build artifacts
+src/web/.nuxt/
+src/web/.output/
+src/web/dist/
+src/web/test-results/
+
+# Node
+src/web/node_modules/

@@ -1,0 +1,20 @@
+{
+  "name": "san-pham-so-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "nuxt": "^3.15.0",
+    "vue": "latest",
+    "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "typescript": "~5.6.0"
+  }
+}
