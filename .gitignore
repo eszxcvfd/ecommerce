@@ -1,0 +1,5 @@
+# Agent and local tooling state
+.agents/
+.pi/
+.scratch/
+skills-lock.json
