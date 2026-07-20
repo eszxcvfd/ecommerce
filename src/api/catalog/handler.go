@@ -11,8 +11,9 @@ import (
 func RegisterRoutes(mux *http.ServeMux, repo CatalogRepository) {
 	h := &handler{repo: repo}
 	mux.HandleFunc("GET /api/v1/danh-muc", h.handleDanhMuc)
-	mux.HandleFunc("GET /api/v1/san-pham", h.handleSanPham)
 	mux.HandleFunc("GET /api/v1/dinh-dang", h.handleDinhDang)
+	mux.HandleFunc("GET /api/v1/san-pham", h.handleSanPham)
+	mux.HandleFunc("GET /api/v1/san-pham/{id}", h.handleSanPhamDetail)
 }
 
 type handler struct {
@@ -117,6 +118,27 @@ func (h *handler) handleSanPham(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(map[string][]SanPhamSo{"san_pham": products})
+}
+
+func (h *handler) handleSanPhamDetail(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "bad_request", "Missing product ID")
+		return
+	}
+
+	sp, err := h.repo.ProductByID(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "storage_unavailable", "Could not load product")
+		return
+	}
+	if sp == nil {
+		writeError(w, http.StatusNotFound, "not_found", "Product not found")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sp)
 }
 
 func (h *handler) handleDinhDang(w http.ResponseWriter, r *http.Request) {

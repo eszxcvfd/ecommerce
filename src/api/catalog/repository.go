@@ -16,6 +16,8 @@ type CatalogRepository interface {
 	Products() ([]SanPhamSo, error)
 	// Search returns approved products matching the given query, sorted accordingly.
 	Search(query CatalogQuery) ([]SanPhamSo, error)
+	// ProductByID returns one approved product by its ID, or nil if not found or not public.
+	ProductByID(id string) (*SanPhamSo, error)
 }
 
 // memoryRepo holds in-memory product data.
@@ -37,6 +39,15 @@ func (r *memoryRepo) Products() ([]SanPhamSo, error) {
 		}
 	}
 	return result, nil
+}
+
+func (r *memoryRepo) ProductByID(id string) (*SanPhamSo, error) {
+	for _, p := range r.products {
+		if p.ID == id && p.TrangThai == TrangThaiDaDuyet {
+			return &p, nil
+		}
+	}
+	return nil, nil
 }
 
 // Search returns approved products filtered and sorted by the given query.

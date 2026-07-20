@@ -764,6 +764,10 @@ func (errRepo) Search(CatalogQuery) ([]SanPhamSo, error) {
 	return nil, fmt.Errorf("simulated disk failure")
 }
 
+func (errRepo) ProductByID(string) (*SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
 func TestCatalogStorageError_Returns500(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterRoutes(mux, errRepo{})
@@ -814,6 +818,156 @@ func TestCatalogStorageError_Returns500(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer res.Body.Close()
+		if res.StatusCode != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", res.StatusCode)
+		}
+		var body map[string]string
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body["error"] != "storage_unavailable" {
+			t.Errorf("expected error 'storage_unavailable', got %q", body["error"])
+		}
+	})
+}
+
+func TestSanPhamDetailEndpoint(t *testing.T) {
+	repo := NewMemoryRepo(seedProducts())
+	mux := http.NewServeMux()
+	RegisterRoutes(mux, repo)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	t.Run("returns 200 and product for approved product", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var sp SanPhamSo
+		if err := json.NewDecoder(res.Body).Decode(&sp); err != nil {
+			t.Fatal(err)
+		}
+		if sp.ID != "sp-001" {
+			t.Errorf("expected id sp-001, got %q", sp.ID)
+		}
+		if sp.Ten != "Bản vẽ nhà phố 3 tầng" {
+			t.Errorf("expected ten 'Bản vẽ nhà phố 3 tầng', got %q", sp.Ten)
+		}
+		if sp.Gia.MienPhi != true {
+			t.Error("expected free product")
+		}
+		if len(sp.DinhDang) == 0 {
+			t.Error("expected non-empty formats")
+		}
+	})
+
+	t.Run("returns 200 and paid product details", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-017")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var sp SanPhamSo
+		if err := json.NewDecoder(res.Body).Decode(&sp); err != nil {
+			t.Fatal(err)
+		}
+		if sp.ID != "sp-017" {
+			t.Errorf("expected id sp-017, got %q", sp.ID)
+		}
+		if sp.Gia.MienPhi != false {
+			t.Error("expected paid product")
+		}
+		if sp.Gia.SoXu != 100 {
+			t.Errorf("expected 100 xu, got %d", sp.Gia.SoXu)
+		}
+		if sp.TrangThai != "" {
+			t.Error("trang_thai should not be serialized (json:\"-\")")
+		}
+	})
+
+	t.Run("returns 404 for non-existent product", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/nonexistent")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("returns 404 for draft product", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-007")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404 for draft product, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("returns 404 for hidden product", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-010")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404 for hidden product, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("returns 404 for pending product", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-008")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404 for pending product, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("returns 404 for rejected product", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-009")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404 for rejected product, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("returns 500 for storage error", func(t *testing.T) {
+		mux2 := http.NewServeMux()
+		RegisterRoutes(mux2, errRepo{})
+		ts2 := httptest.NewServer(mux2)
+		defer ts2.Close()
+
+		res, err := http.Get(ts2.URL + "/api/v1/san-pham/sp-001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
 		if res.StatusCode != http.StatusInternalServerError {
 			t.Fatalf("expected 500, got %d", res.StatusCode)
 		}

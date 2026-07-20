@@ -126,6 +126,55 @@ func (r *sqliteRepo) Search(query CatalogQuery) ([]SanPhamSo, error) {
 	return queryApproved(r.db, query)
 }
 
+// ProductByID returns one approved product by ID, or nil if not found or not public.
+func (r *sqliteRepo) ProductByID(id string) (*SanPhamSo, error) {
+	return queryProductApproved(r.db, id)
+}
+
+// queryProductApproved fetches a single approved product by ID.
+// Returns nil, nil if not found or not approved.
+func queryProductApproved(db *sql.DB, id string) (*SanPhamSo, error) {
+	var sp SanPhamSo
+	var ngayTao string
+	err := db.QueryRow(`
+		SELECT s.id, s.ten, s.mo_ta, s.anh_demo,
+		       s.mien_phi, s.so_xu, s.danh_muc,
+		       s.diem_danh_gia, s.so_luong_danh_gia, s.ngay_tao,
+		       s.so_luot_tai, s.trang_thai
+		FROM san_pham_so s
+		WHERE s.id = ? AND s.trang_thai = 'approved'
+	`, id).Scan(
+		&sp.ID, &sp.Ten, &sp.MoTa, &sp.AnhDemo,
+		&sp.Gia.MienPhi, &sp.Gia.SoXu,
+		&sp.DanhMuc, &sp.DiemDanhGia, &sp.SoLuongDanhGia,
+		&ngayTao, &sp.SoLuotTai, &sp.TrangThai,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query product %s: %w", id, err)
+	}
+	t, err := time.Parse(time.RFC3339, ngayTao)
+	if err != nil {
+		t, err = time.Parse("2006-01-02T15:04:05Z07:00", ngayTao)
+		if err != nil {
+			t = time.Time{}
+		}
+	}
+	sp.NgayTao = t
+
+	// Load formats
+	formatMap, err := batchLoadDinhDang(db, []string{id})
+	if err != nil {
+		return nil, fmt.Errorf("load formats for %s: %w", id, err)
+	}
+	sp.DinhDang = formatMap[id]
+
+	return &sp, nil
+}
+
+
 // queryApproved returns approved products optionally filtered/sorted.
 func queryApproved(db *sql.DB, q CatalogQuery) ([]SanPhamSo, error) {
 	var conditions []string

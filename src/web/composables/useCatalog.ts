@@ -150,3 +150,33 @@ export function useCatalogSearch() {
     refresh,
   }
 }
+
+/**
+ * Fetch a single product by ID from the detail API.
+ */
+export function useSanPhamDetail(id: string) {
+  const { data, error, refresh } = useFetch<SanPhamSo>(`/api/v1/san-pham/${id}`, {
+    watch: false,
+  })
+
+  return {
+    product: data,
+    error,
+    loaded: computed(() => data.value !== null && data.value !== undefined),
+    notFound: computed(() => {
+      // 404 from API returns empty/error body — detect via error
+      if (!error.value) return false
+      const err = error.value
+      if (err && typeof err === 'object' && 'statusCode' in err) {
+        const withCode = err as Record<string, unknown>
+        return typeof withCode.statusCode === 'number' && withCode.statusCode === 404
+      }
+      if (err && typeof err === 'object' && 'status' in err) {
+        const withStatus = err as Record<string, unknown>
+        return typeof withStatus.status === 'number' && withStatus.status === 404
+      }
+      return false
+    }),
+    refresh,
+  }
+}

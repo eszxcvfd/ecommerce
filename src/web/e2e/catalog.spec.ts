@@ -174,3 +174,53 @@ test.describe('Search and sort', () => {
     await expect(page).toHaveURL(/q=CNC/)
   })
 })
+
+test.describe('Product detail page', () => {
+  test('shows product details for a free product', async ({ page }) => {
+    await page.goto('/san-pham/sp-001')
+
+    // Product title should be visible
+    await expect(page.locator('.product-detail__title')).toHaveText('Bản vẽ nhà phố 3 tầng')
+
+    // Description should be visible
+    await expect(page.locator('.product-detail__description')).toBeVisible()
+
+    // Category should be visible
+    await expect(page.locator('.product-detail__category')).toContainText('kiến trúc')
+
+    // Free label should be visible
+    await expect(page.locator('.product-detail__price')).toContainText('Miễn phí')
+
+    // Formats should be visible
+    const formats = page.locator('.product-detail__formats .format-badge')
+    await expect(formats).toHaveCount(2)
+  })
+
+  test('shows paid product price in Xu', async ({ page }) => {
+    await page.goto('/san-pham/sp-017')
+
+    await expect(page.locator('.product-detail__title')).toContainText('Mẫu vách CNC')
+    await expect(page.locator('.product-detail__price')).toContainText('100')
+    await expect(page.locator('.product-detail__price')).toContainText('Xu')
+  })
+
+  test('shows demo image for product', async ({ page }) => {
+    await page.goto('/san-pham/sp-001')
+    await expect(page.locator('.product-detail__image img')).toBeAttached()
+  })
+
+  test('shows 404 for non-existent product', async ({ page }) => {
+    await page.goto('/san-pham/nonexistent')
+    await expect(page.locator('.product-detail__not-found')).toBeVisible()
+  })
+
+  test('does not show detail for hidden product', async ({ page }) => {
+    await page.goto('/san-pham/sp-010')
+    await expect(page.locator('.product-detail__not-found')).toBeVisible()
+  })
+
+  test('shows star rating on detail page', async ({ page }) => {
+    await page.goto('/san-pham/sp-001')
+    await expect(page.locator('.product-detail__rating')).toContainText('★')
+  })
+})
