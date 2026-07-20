@@ -5,8 +5,6 @@
 // Usage:
 //
 //	APP_ENV=production SQLITE_DB_PATH=/data/prod.sqlite3 \
-//	  go run ./cmd/importcatalog -path seed_data.json
-//
 //	Allow duplicate IDs (INSERT OR IGNORE):
 //	  go run ./cmd/importcatalog -path data.json -allow-duplicates
 package main

@@ -137,7 +137,11 @@ func queryApproved(db *sql.DB, q CatalogQuery) ([]SanPhamSo, error) {
 	// Text search
 	if q.Q != "" {
 		normalized := normalizeSearch(q.Q)
-		conditions = append(conditions, "INSTR(s.ten_search || ' ' || s.mo_ta_search, ?) > 0")
+		// ADR-0001 requires LIKE over normalized columns for accent-insensitive search.
+		// Both the stored search columns and the query are lowercased, stripped of
+		// combining marks, and have đ→d mapped, so LIKE '%q%' on the concatenated
+		// normalized text provides case/accent-insensitive substring matching.
+		conditions = append(conditions, "(s.ten_search || ' ' || s.mo_ta_search) LIKE '%' || ? || '%'")
 		args = append(args, normalized)
 	}
 

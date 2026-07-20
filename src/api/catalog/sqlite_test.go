@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"path/filepath"
 	"testing"
-	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -173,33 +172,14 @@ func TestOpenSQLite_CreatesSchemaAndSetsPragmas(t *testing.T) {
 	})
 }
 
-// seedSQLite inserts the full seed dataset into the given (already-migrated) SQLite DB.
+// seedSQLite inserts the full seed dataset via the shared SeedSQLite function,
+// which reads the embedded versioned JSON contract (seed_data.json).
+// Using SeedSQLite ensures adapter tests exercise the same JSON-backed path
+// as production bootstrapping, not a duplicate Go-slice path.
 func seedSQLite(t *testing.T, db *sql.DB) {
 	t.Helper()
-	products := SeedData()
-	for _, p := range products {
-		_, err := db.Exec(`
-			INSERT INTO san_pham_so (id, ten, mo_ta, anh_demo, mien_phi, so_xu, danh_muc,
-			                         diem_danh_gia, so_luong_danh_gia, ngay_tao, so_luot_tai, trang_thai,
-			                         ten_search, mo_ta_search)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, p.ID, p.Ten, p.MoTa, p.AnhDemo, boolToInt(p.Gia.MienPhi), p.Gia.SoXu,
-			string(p.DanhMuc), p.DiemDanhGia, p.SoLuongDanhGia,
-			p.NgayTao.Format(time.RFC3339), p.SoLuotTai, string(p.TrangThai),
-			normalizeSearch(p.Ten), normalizeSearch(p.MoTa),
-		)
-		if err != nil {
-			t.Fatalf("insert product %s: %v", p.ID, err)
-		}
-		for _, ext := range p.DinhDang {
-			_, err := db.Exec(
-				"INSERT INTO san_pham_dinh_dang (san_pham_id, dinh_dang) VALUES (?, ?)",
-				p.ID, ext,
-			)
-			if err != nil {
-				t.Fatalf("insert format %s for %s: %v", ext, p.ID, err)
-			}
-		}
+	if err := SeedSQLite(db); err != nil {
+		t.Fatalf("seedSQLite: %v", err)
 	}
 }
 
@@ -378,6 +358,31 @@ func TestSQLiteSearch_TextSearch(t *testing.T) {
 		}
 		if len(products) != 0 {
 			t.Fatalf("expected 0 products, got %d", len(products))
+		}
+	})
+
+	t.Run("search via LIKE per ADR-0001", func(t *testing.T) {
+		// ADR-0001 requires accent-insensitive search using LIKE over normalized columns.
+		// This test documents that search works as a substring match; the normalized
+		// search columns and query are both lowercased, stripped of accents, and
+		// have đ→d mapped, so LIKE '%q%' provides the same substring semantics as INSTR.
+		products, err := repo.Search(CatalogQuery{Q: "xây"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
+		if len(products) == 0 {
+			t.Fatal("expected at least 1 product matching 'xây' with accent-insensitive search")
+		}
+		// Verify the search result contains a product with "xây dựng" in its name
+		found := false
+		for _, p := range products {
+			if p.ID == "sp-006" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("expected sp-006 'Luận văn thạc sĩ AI trong xây dựng' in results for accent-insensitive search 'xây'")
 		}
 	})
 }

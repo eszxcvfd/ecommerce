@@ -51,13 +51,13 @@ func TestResolveDBPath(t *testing.T) {
 		}
 	})
 
-	t.Run("development with empty path returns ../data/dev.sqlite3", func(t *testing.T) {
+	t.Run("development with empty path returns ../../data/dev.sqlite3", func(t *testing.T) {
 		path, err := ResolveDBPath(AppEnvDevelopment, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if path != "../data/dev.sqlite3" {
-			t.Errorf("expected default '../data/dev.sqlite3', got %q", path)
+		if path != "../../data/dev.sqlite3" {
+			t.Errorf("expected default '../../data/dev.sqlite3', got %q", path)
 		}
 	})
 
@@ -71,13 +71,13 @@ func TestResolveDBPath(t *testing.T) {
 		}
 	})
 
-	t.Run("production with empty path returns ../data/production.sqlite3", func(t *testing.T) {
+	t.Run("production with empty path returns ../../data/production.sqlite3", func(t *testing.T) {
 		path, err := ResolveDBPath(AppEnvProduction, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if path != "../data/production.sqlite3" {
-			t.Errorf("expected default '../data/production.sqlite3', got %q", path)
+		if path != "../../data/production.sqlite3" {
+			t.Errorf("expected default '../../data/production.sqlite3', got %q", path)
 		}
 	})
 
