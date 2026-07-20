@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"ecommerce/api/catalog"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
