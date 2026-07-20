@@ -1,6 +1,8 @@
 // Package catalog defines domain types for the public product catalog.
 package catalog
 
+import "time"
+
 // DanhMuc represents a product category.
 type DanhMuc string
 
@@ -44,10 +46,38 @@ type Gia struct {
 type SanPhamSo struct {
 	ID             string           `json:"id"`
 	Ten            string           `json:"ten"`
+	MoTa           string           `json:"mo_ta"`
 	AnhDemo        string           `json:"anh_demo"`
 	Gia            Gia              `json:"gia"`
 	DanhMuc        DanhMuc          `json:"danh_muc"`
+	DinhDang       []string         `json:"dinh_dang"`
 	DiemDanhGia    float64          `json:"diem_danh_gia"`
 	SoLuongDanhGia int              `json:"so_luong_danh_gia"`
+	NgayTao        time.Time        `json:"ngay_tao"`
+	SoLuotTai      int64            `json:"so_luot_tai"`
 	TrangThai      TrangThaiSanPham `json:"-"`
 }
+
+// CatalogQuery carries all search/filter/sort parameters for the public catalog.
+type CatalogQuery struct {
+	Q        string
+	DanhMuc  string
+	DinhDang string
+	MinXu    *int64
+	MaxXu    *int64
+	Sort     string
+}
+
+// SortOrder represents a recognized sort key.
+type SortOrder string
+
+const (
+	SortNewest    SortOrder = "newest"
+	SortPopular   SortOrder = "popular"
+	SortPriceAsc  SortOrder = "price_asc"
+	SortPriceDesc SortOrder = "price_desc"
+	SortRating    SortOrder = "rating"
+)
+
+// ValidSortOrders lists all supported sort orders.
+var ValidSortOrders = []SortOrder{SortNewest, SortPopular, SortPriceAsc, SortPriceDesc, SortRating}

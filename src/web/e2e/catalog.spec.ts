@@ -10,12 +10,12 @@ test.describe('Public catalog page', () => {
     await expect(page.locator('.catalog__subtitle')).toBeVisible()
   })
 
-  test('displays all six categories', async ({ page }) => {
-    const categories = page.locator('.catalog__category-card')
-    await expect(categories).toHaveCount(6)
+  test('displays all six categories as filter buttons', async ({ page }) => {
+    const categoryBtns = page.locator('.catalog__category-grid .catalog__filter-btn')
+    await expect(categoryBtns).toHaveCount(7) // "Tất cả" + 6 categories
 
-    const expected = ['kiến trúc', 'cơ khí', 'điện tử', 'đồ họa', 'đồ án', 'luận văn']
-    const texts = await categories.allTextContents()
+    const expected = ['Tất cả', 'kiến trúc', 'cơ khí', 'điện tử', 'đồ họa', 'đồ án', 'luận văn']
+    const texts = await categoryBtns.allTextContents()
     for (const name of expected) {
       expect(texts.some(t => t.trim().includes(name))).toBeTruthy()
     }
@@ -30,7 +30,6 @@ test.describe('Public catalog page', () => {
     await expect(firstCard.locator('.product-card__title')).toBeVisible()
     await expect(firstCard.locator('.product-card__category')).toBeVisible()
     await expect(firstCard.locator('.product-card__price')).toBeVisible()
-    // Rating might be present or show "Chưa có đánh giá"
     await expect(firstCard.locator('.product-card__rating')).toBeVisible()
   })
 
@@ -53,27 +52,24 @@ test.describe('Public catalog page', () => {
   })
 
   test('shows filethietke.vn-backed products with thumbnails', async ({ page }) => {
-    // Auto-retrying locators confirm title and thumbnail
     const ftTitle = page.locator('.product-card__title', { hasText: 'Mẫu vách CNC đồng tiền hiện đại' })
     await expect(ftTitle).toBeVisible()
 
     const ftTitle2 = page.locator('.product-card__title', { hasText: 'Mẫu vách cổng CNC cây nghệ thuật' })
     await expect(ftTitle2).toBeVisible()
 
-    // Card with source-backed thumbnail renders an img element (avoid network assertion)
     const ftCard = page.locator('.product-card').filter({ hasText: 'Mẫu vách CNC đồng tiền hiện đại' })
     await expect(ftCard.locator('img')).toBeAttached()
   })
 
-  test('filters products by selected category', async ({ page }) => {
-    // All 12 approved products are initially visible
+  test('filters products by selected category via backend query', async ({ page }) => {
     const cards = page.locator('.product-card')
     await expect(cards).toHaveCount(12)
 
     // Click "cơ khí" category filter
-    await page.locator('.catalog__category-card', { hasText: 'cơ khí' }).click()
+    await page.locator('.catalog__filter-btn', { hasText: 'cơ khí' }).click()
 
-    // Only 2 products in "cơ khí" remain visible
+    // Wait for API response — only 2 products in "cơ khí"
     await expect(cards).toHaveCount(2)
 
     // Every visible card shows "cơ khí" as its category
@@ -82,11 +78,99 @@ test.describe('Public catalog page', () => {
       expect(cat.trim()).toBe('cơ khí')
     }
 
-    // Active category button exposes selected state
-    await expect(page.locator('.catalog__category-card', { hasText: 'cơ khí' })).toHaveAttribute('aria-pressed', 'true')
+    // Active category button class
+    const activeBtn = page.locator('.catalog__filter-btn--active', { hasText: 'cơ khí' })
+    await expect(activeBtn).toBeVisible()
 
     // Click "Tất cả" restores all products
-    await page.locator('.catalog__filter-btn').click()
+    await page.locator('.catalog__filter-btn', { hasText: 'Tất cả' }).click()
     await expect(cards).toHaveCount(12)
+  })
+})
+
+test.describe('Search and sort', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+  })
+
+  test('search input is visible and filters by name', async ({ page }) => {
+    const searchInput = page.locator('.catalog__search-input')
+    await expect(searchInput).toBeVisible()
+
+    await searchInput.fill('CNC')
+
+    // Wait for debounced search + API response
+    const cards = page.locator('.product-card')
+    await expect(cards).toHaveCount(2)
+
+    const titles = await page.locator('.product-card__title').allTextContents()
+    expect(titles.join(' ')).toContain('CNC')
+  })
+
+  test('search empty state shows reset suggestion', async ({ page }) => {
+    const searchInput = page.locator('.catalog__search-input')
+    await searchInput.fill('zzzznotfound')
+
+    // Wait for empty state
+    const empty = page.locator('.catalog__empty')
+    await expect(empty).toBeVisible()
+    await expect(empty).toContainText('Không tìm thấy')
+
+    // Reset button should be visible
+    await expect(page.locator('.catalog__reset-btn')).toBeVisible()
+  })
+
+  test('reset button clears search and filters', async ({ page }) => {
+    const cards = page.locator('.product-card')
+    await expect(cards).toHaveCount(12)
+
+    // Apply category filter
+    await page.locator('.catalog__filter-btn', { hasText: 'cơ khí' }).click()
+    await expect(cards).toHaveCount(2)
+
+    // Click reset
+    await page.locator('.catalog__reset-btn').click()
+    await expect(cards).toHaveCount(12)
+  })
+
+  test('sort dropdown changes product order', async ({ page }) => {
+    // Wait for products to load
+    const cards = page.locator('.product-card')
+    await expect(cards).toHaveCount(12)
+
+    // Select sort by price ascending
+    await page.locator('.catalog__select[aria-label="Sắp xếp"]').selectOption('price_asc')
+
+    // Wait for re-fetch and check that first card is free
+    await expect(cards.first().locator('.product-card__price--free')).toBeVisible()
+  })
+
+  test('format filter narrows results', async ({ page }) => {
+    const cards = page.locator('.product-card')
+    await expect(cards).toHaveCount(12)
+
+    // Select "dxf" format
+    await page.locator('.catalog__select[aria-label="Lọc theo định dạng"]').selectOption('dxf')
+
+    // Should show only DXF products
+    await expect(cards).toHaveCount(2)
+  })
+
+  test('product card shows description excerpt and format badges', async ({ page }) => {
+    const firstCard = page.locator('.product-card').first()
+    await expect(firstCard.locator('.product-card__description')).toBeVisible()
+    // At least one format badge
+    await expect(firstCard.locator('.product-card__format-badge').first()).toBeVisible()
+  })
+
+  test('URL is synced with search query', async ({ page }) => {
+    await page.locator('.catalog__search-input').fill('CNC')
+
+    // Wait for debounce + API
+    const cards = page.locator('.product-card')
+    await expect(cards).toHaveCount(2)
+
+    // URL should contain query param
+    await expect(page).toHaveURL(/q=CNC/)
   })
 })

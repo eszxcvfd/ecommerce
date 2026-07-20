@@ -16,6 +16,20 @@
       <span class="product-card__category">{{ product.danh_muc }}</span>
       <h3 class="product-card__title">{{ product.ten }}</h3>
 
+      <p v-if="descriptionExcerpt" class="product-card__description">
+        {{ descriptionExcerpt }}
+      </p>
+
+      <div v-if="product.dinh_dang && product.dinh_dang.length" class="product-card__formats">
+        <span
+          v-for="fmt in product.dinh_dang"
+          :key="fmt"
+          class="product-card__format-badge"
+        >
+          {{ fmt }}
+        </span>
+      </div>
+
       <div class="product-card__meta">
         <span
           class="product-card__price"
@@ -38,11 +52,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { SanPhamSo } from '~/composables/useCatalog'
 
-defineProps<{
+const props = defineProps<{
   product: SanPhamSo
 }>()
+
+const descriptionExcerpt = computed(() => {
+  if (!props.product.mo_ta) return ''
+  if (props.product.mo_ta.length <= 120) return props.product.mo_ta
+  return props.product.mo_ta.slice(0, 120) + '...'
+})
 
 function formatPrice(xu: number): string {
   return xu.toLocaleString('vi-VN')
@@ -114,6 +135,31 @@ function renderStars(rating: number): string {
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-text);
+}
+
+.product-card__description {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.product-card__formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.product-card__format-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: var(--color-badge-bg, #e8e8ed);
+  color: var(--color-badge-text, #555);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  line-height: 1.4;
 }
 
 .product-card__meta {
