@@ -6,23 +6,26 @@ Tài liệu này đi cùng [ADR 0001](../adr/0001-sqlite-primary-database.md). C
 
 `APP_ENV` luôn bắt buộc:
 
-- `development`: database mặc định `var/dev.sqlite3` nếu không đặt `SQLITE_DB_PATH`;
-- `production`: bắt buộc `SQLITE_DB_PATH` là absolute path ngoài repository và nằm trên persistent volume.
+- `development`: database mặc định `data/dev.sqlite3` nếu không đặt `SQLITE_DB_PATH`;
+- `production`: database mặc định `data/production.sqlite3` nếu không đặt `SQLITE_DB_PATH`.
+- `SQLITE_DB_PATH` override cho mọi môi trường, dùng absolute path cho production deployment trên persistent volume.
 
-Ví dụ xem `src/api/.env.example`. Không commit database file hoặc file chứa secret.
+**Lưu ý về đường dẫn vật lý:** Các giá trị mặc định trên là tên logical. Khi chạy từ `src/api/` (workflow được document), chúng resolve thành `../data/dev.sqlite3` và `../data/production.sqlite3` để đảm bảo database file nằm trong thư mục `data/` ở thư mục gốc repository.
+
+Ví dụ xem `src/api/.env.example`. Database files và SQLite sidecars là runtime artifact, không commit vào repository.
 
 ## Development
 
 ```sh
 cd src/api
-export APP_ENV=development
-export SQLITE_DB_PATH=../var/dev.sqlite3
+# data/dev.sqlite3 được dùng mặc định (resolve thành ../data/dev.sqlite3);
+# có thể ghi đè bằng SQLITE_DB_PATH.
 
 # API sẽ migrate và seed khi database rỗng.
 rtk go run .
 ```
 
-Development seed không reset hoặc overwrite dữ liệu đã có. E2E/testserver phải dùng file SQLite tạm riêng, chạy migration và seed trong file đó.
+Development seed không reset hoặc overwrite dữ liệu đã có. E2E/cmd/test phải dùng file SQLite tạm riêng, chạy migration và seed trong file đó.
 
 ## Production deploy
 
@@ -32,7 +35,7 @@ Production không auto-seed và không để API tự thay đổi schema. Quy tr
 2. Tạo backup trước migration/import.
 3. Chạy migration command explicit.
 4. Kiểm tra migration hoàn tất và không còn pending.
-5. Start API với `APP_ENV=production` và `SQLITE_DB_PATH` explicit.
+5. Start API với `APP_ENV=production` (dùng `data/production.sqlite3` mặc định, resolve thành `../data/production.sqlite3` từ `src/api/`, hoặc `SQLITE_DB_PATH` override cho persistent volume).
 6. Kiểm tra `/healthz` và `/readyz`.
 
 API fail fast nếu database không mở được, migration/schema chưa sẵn sàng hoặc config không hợp lệ.

@@ -5,7 +5,7 @@
 skills-lock.json
 
 # Go binaries
-src/api/testserver
+src/api/test
 
 # Nuxt build artifacts
 src/web/.nuxt/
@@ -19,7 +19,8 @@ src/web/node_modules/
 # Tooling – scrapers, fixtures, design tool outputs (not committed)
 /tool/
 
-# Local SQLite databases and backups
+# Local runtime data and SQLite database files
+data/
 var/
 *.sqlite3
 *.sqlite3-wal

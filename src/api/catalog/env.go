@@ -2,7 +2,6 @@ package catalog
 
 import (
 	"fmt"
-	"path/filepath"
 )
 
 // AppEnv represents the application environment.
@@ -29,17 +28,20 @@ func ParseAppEnv(s string) (AppEnv, error) {
 }
 
 // ResolveDBPath returns the resolved SQLite database path for the given environment.
-// For development, if path is empty, it returns the default "../var/dev.sqlite3".
-// For production, path must be non-empty and absolute.
+// The logical defaults are data/dev.sqlite3 and data/production.sqlite3 (documented
+// in ADR-0001 and the runbook). Because the documented workflow runs from src/api/,
+// the physical defaults use ../data/... to land in the repository-level data/ directory.
+// A non-empty path is accepted as-is in both environments (override via SQLITE_DB_PATH).
 func ResolveDBPath(env AppEnv, path string) (string, error) {
 	if path != "" {
-		if env == AppEnvProduction && !filepath.IsAbs(path) {
-			return "", fmt.Errorf("SQLITE_DB_PATH must be an absolute path in production")
-		}
 		return path, nil
 	}
-	if env == AppEnvDevelopment {
-		return "../var/dev.sqlite3", nil
+	switch env {
+	case AppEnvDevelopment:
+		return "../data/dev.sqlite3", nil
+	case AppEnvProduction:
+		return "../data/production.sqlite3", nil
+	default:
+		return "", fmt.Errorf("SQLITE_DB_PATH is required in %s", env)
 	}
-	return "", fmt.Errorf("SQLITE_DB_PATH is required in production")
 }

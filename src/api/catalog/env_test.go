@@ -51,17 +51,17 @@ func TestResolveDBPath(t *testing.T) {
 		}
 	})
 
-	t.Run("development with empty path returns default", func(t *testing.T) {
+	t.Run("development with empty path returns ../data/dev.sqlite3", func(t *testing.T) {
 		path, err := ResolveDBPath(AppEnvDevelopment, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if path != "../var/dev.sqlite3" {
-			t.Errorf("expected default '../var/dev.sqlite3', got %q", path)
+		if path != "../data/dev.sqlite3" {
+			t.Errorf("expected default '../data/dev.sqlite3', got %q", path)
 		}
 	})
 
-	t.Run("production with explicit path returns that path", func(t *testing.T) {
+	t.Run("production with explicit absolute path returns that path", func(t *testing.T) {
 		path, err := ResolveDBPath(AppEnvProduction, "/var/lib/ecommerce/prod.sqlite3")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -71,17 +71,23 @@ func TestResolveDBPath(t *testing.T) {
 		}
 	})
 
-	t.Run("production with empty path returns error", func(t *testing.T) {
-		_, err := ResolveDBPath(AppEnvProduction, "")
-		if err == nil {
-			t.Fatal("expected error for production with empty path")
+	t.Run("production with empty path returns ../data/production.sqlite3", func(t *testing.T) {
+		path, err := ResolveDBPath(AppEnvProduction, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if path != "../data/production.sqlite3" {
+			t.Errorf("expected default '../data/production.sqlite3', got %q", path)
 		}
 	})
 
-	t.Run("production with relative path returns error", func(t *testing.T) {
-		_, err := ResolveDBPath(AppEnvProduction, "var/prod.sqlite3")
-		if err == nil {
-			t.Fatal("expected error for production with relative path")
+	t.Run("production with relative path is accepted as override", func(t *testing.T) {
+		path, err := ResolveDBPath(AppEnvProduction, "my/path.sqlite3")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if path != "my/path.sqlite3" {
+			t.Errorf("expected 'my/path.sqlite3', got %q", path)
 		}
 	})
 }

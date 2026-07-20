@@ -26,10 +26,11 @@ Search không dấu dùng các cột search đã chuẩn hóa và truy vấn `LI
 ## Môi trường và cấu hình
 
 - `APP_ENV` bắt buộc, nhận `development` hoặc `production`.
-- Development có default `SQLITE_DB_PATH=var/dev.sqlite3`.
-- Production bắt buộc `SQLITE_DB_PATH` là absolute path ngoài repository, thường nằm trên persistent volume.
+- Development default `SQLITE_DB_PATH=data/dev.sqlite3`.
+- Production default `SQLITE_DB_PATH=data/production.sqlite3`.
+- `SQLITE_DB_PATH` là override rõ ràng, dùng absolute path cho production deployment trên persistent volume.
 - Thiếu cấu hình bắt buộc hoặc database không mở được thì fail fast.
-- Không commit database file vào repository.
+- Database files và SQLite sidecars (`-wal`, `-shm`) không commit vào repository.
 
 Production chạy một API instance với một persistent volume và một writer connection. Bật `foreign_keys=ON`, `journal_mode=WAL`, `busy_timeout` và `synchronous=NORMAL`.
 
@@ -56,7 +57,7 @@ Dùng migration SQL versioned, embedded bằng `go:embed` và chạy qua `pressl
 
 - Contract tests chạy cho cả in-memory và SQLite adapters.
 - HTTP tests dùng SQLite adapter làm mặc định cho runtime path.
-- E2E dùng SQLite database tạm mỗi run, chạy migration và dev seed, không chạm `var/dev.sqlite3`.
+- E2E dùng SQLite database tạm mỗi run, chạy migration và dev seed, không chạm `data/dev.sqlite3`.
 - Test phải kiểm tra migration, public invariant, query/filter/sort, lỗi storage, import atomicity và health/readiness.
 
 ## Hệ quả

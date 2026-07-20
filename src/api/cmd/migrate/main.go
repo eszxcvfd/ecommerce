@@ -3,7 +3,7 @@
 //
 // Usage:
 //
-//	APP_ENV=development [SQLITE_DB_PATH=var/dev.sqlite3] go run ./cmd/migrate
+//	APP_ENV=development [SQLITE_DB_PATH=../data/dev.sqlite3] go run ./cmd/migrate
 //	APP_ENV=production SQLITE_DB_PATH=/data/prod.sqlite3 go run ./cmd/migrate
 package main
 

@@ -5,6 +5,8 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -21,6 +23,12 @@ const defaultBusyTimeout = 5000
 // runs embedded versioned migrations, and returns the *sql.DB handle.
 // The returned DB is configured with MaxOpenConns=1 (single writer).
 func OpenSQLite(path string) (*sql.DB, error) {
+	// Ensure parent directory exists before opening the database file.
+	parent := filepath.Dir(path)
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		return nil, fmt.Errorf("create database directory %s: %w", parent, err)
+	}
+
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
@@ -292,6 +300,11 @@ func batchLoadDinhDang(db *sql.DB, ids []string) (map[string][]string, error) {
 // that all embedded migrations have been applied (without running them).
 // This is the production counterpart of OpenSQLite (which auto-migrates).
 func OpenSQLiteProd(path string) (*sql.DB, error) {
+	// Ensure parent directory exists before opening the database file.
+	parent := filepath.Dir(path)
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		return nil, fmt.Errorf("create database directory %s: %w", parent, err)
+	}
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)

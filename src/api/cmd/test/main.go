@@ -1,16 +1,19 @@
-// Command testserver starts the catalog API with seeded data for e2e tests.
+// Command test starts the catalog API with seeded data for E2E tests.
+// It uses a temporary SQLite database, runs migrations and seed data,
+// then starts an HTTP server on the configured port.
+//
+// This is intentionally NOT production-grade: no signal handling, graceful
+// shutdown, or backup/import policy. It blocks serving until interrupted.
 package main
 
 import (
-	"context"
 	"log"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"ecommerce/api/catalog"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -36,27 +39,10 @@ func main() {
 	checkReady := func() error { return catalog.VerifySchema(db) }
 	srv := catalog.NewServer(":"+port, repo, db, checkReady)
 
-	// Graceful shutdown on SIGINT/SIGTERM
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		log.Printf("Test API server listening on :%s", port)
-		if err := srv.ListenAndServe(); err != nil {
-			log.Fatalf("server: %v", err)
-		}
-	}()
-
-	<-quit
-	log.Println("Shutting down gracefully…")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown: %v", err)
+	log.Printf("Test API server listening on :%s (db=%s)", port, dbPath)
+	if err := srv.ListenAndServe(); err != nil {
+		log.Printf("server stopped: %v", err)
 	}
-	log.Println("Server stopped")
 }
 
 func timestamp() string {

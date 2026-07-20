@@ -10,7 +10,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'go run ./cmd/testserver/',
+      command: 'go run ./cmd/test/',
       port: 8080,
       cwd: '../api',
       timeout: 15000,

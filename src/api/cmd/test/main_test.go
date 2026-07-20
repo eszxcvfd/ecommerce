@@ -1,6 +1,6 @@
-// Command testserver starts the catalog API with seeded data for e2e tests.
-// This test verifies the testserver binary starts correctly, uses a unique
-// temporary SQLite database (not var/dev.sqlite3), and serves the expected
+// Command test starts the catalog API with seeded data for e2e tests.
+// This test verifies the test binary starts correctly, uses a unique
+// temporary SQLite database (not data/dev.sqlite3), and serves the expected
 // catalog data through the HTTP API.
 package main
 
@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-func TestTestserver_UsesTempSQLiteAndServesCatalog(t *testing.T) {
-	// Build the testserver binary.
-	bin := filepath.Join(t.TempDir(), "testserver")
+func TestTest_UsesTempSQLiteAndServesCatalog(t *testing.T) {
+	// Build the test binary.
+	bin := filepath.Join(t.TempDir(), "e2e-test")
 	if err := exec.Command("go", "build", "-o", bin, ".").Run(); err != nil {
 		t.Skipf("build failed: %v (integration test requires build)", err)
 	}
@@ -25,7 +25,7 @@ func TestTestserver_UsesTempSQLiteAndServesCatalog(t *testing.T) {
 	// Start on a free-ish port.
 	cmd := exec.Command(bin)
 	cmd.Env = append(os.Environ(), "API_PORT=19998")
-	// Intentionally do NOT set APP_ENV or SQLITE_DB_PATH — the testserver
+	// Intentionally do NOT set APP_ENV or SQLITE_DB_PATH — the test command
 	// should derive a temp path on its own without requiring env vars.
 
 	if err := cmd.Start(); err != nil {
@@ -39,7 +39,7 @@ func TestTestserver_UsesTempSQLiteAndServesCatalog(t *testing.T) {
 	// Fetch the product list.
 	resp, err := http.Get("http://localhost:19998/api/v1/san-pham")
 	if err != nil {
-		t.Fatalf("testserver did not respond: %v", err)
+		t.Fatalf("test did not respond: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -71,9 +71,9 @@ func TestTestserver_UsesTempSQLiteAndServesCatalog(t *testing.T) {
 	}
 }
 
-func TestTestserver_DBPathIsInTempDir_NotVarDir(t *testing.T) {
-	// Build the testserver binary.
-	bin := filepath.Join(t.TempDir(), "testserver-dbpath")
+func TestTest_DBPathIsInTempDir_NotDataDir(t *testing.T) {
+	// Build the test binary.
+	bin := filepath.Join(t.TempDir(), "e2e-test-dbpath")
 	if err := exec.Command("go", "build", "-o", bin, ".").Run(); err != nil {
 		t.Skipf("build failed: %v (integration test requires build)", err)
 	}
@@ -87,37 +87,26 @@ func TestTestserver_DBPathIsInTempDir_NotVarDir(t *testing.T) {
 
 	time.Sleep(800 * time.Millisecond)
 
-	// The testserver logs the database path.
-	// Since we can't read stderr easily after the fact via exec, we instead
-	// verify via the API that it's working and confirm no var/dev.sqlite3
-	// was created by this run.
-
 	// 1. API works.
 	resp, err := http.Get("http://localhost:19997/api/v1/san-pham")
 	if err != nil {
-		t.Fatalf("testserver did not respond: %v", err)
+		t.Fatalf("test did not respond: %v", err)
 	}
 	resp.Body.Close()
 
-	// 2. No var/dev.sqlite3 was created by the testserver process.
-	// The testserver runs from src/api/ and the default dev path is ../var/dev.sqlite3
-	// which resolves to src/var/dev.sqlite3.
-	// Check a few known locations to be safe.
+	// 2. No data/dev.sqlite3 was created by the test process.
 	badPaths := []string{
-		"../../var/dev.sqlite3",           // relative to cmd/testserver/
-		"../var/dev.sqlite3",              // relative to src/api/
-		filepath.Join("..", "..", "var", "dev.sqlite3"),
+		"data/dev.sqlite3",
+		filepath.Join("..", "data", "dev.sqlite3"),
 	}
 	for _, p := range badPaths {
 		abs, _ := filepath.Abs(p)
 		if _, err := os.Stat(abs); err == nil {
-			// File exists — check if it's been recently modified (within last 5s)
 			info, _ := os.Stat(abs)
 			if time.Since(info.ModTime()) < 30*time.Second {
-				// Check if it contains our test data
 				data, readErr := os.ReadFile(abs)
 				if readErr == nil && strings.Contains(string(data), "sp-001") {
-					t.Errorf("testserver created/used database at %s instead of temp dir", abs)
+					t.Errorf("test created/used database at %s instead of temp dir", abs)
 				}
 			}
 		}

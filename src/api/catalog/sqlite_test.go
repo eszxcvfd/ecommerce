@@ -21,6 +21,37 @@ func openTestSQLite(t *testing.T) *sql.DB {
 	return db
 }
 
+func TestOpenSQLite_CreatesParentDirWhenAbsent(t *testing.T) {
+	// Use a path inside a deeply nested non-existent subdirectory of TempDir.
+	// Neither the parent dirs nor the file should exist before the call.
+	dbPath := filepath.Join(t.TempDir(), "a", "b", "c", "test.db")
+	if _, err := filepath.Glob(dbPath); err == nil {
+		// sanity: dir does not exist yet
+	}
+
+	db, err := OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("OpenSQLite with path in non-existent dir should succeed: %v", err)
+	}
+	defer db.Close()
+
+	// Verify the parent directory was created.
+	parent := filepath.Dir(filepath.Dir(dbPath))
+	if fi, err := filepath.Glob(filepath.Dir(parent)); err == nil && len(fi) > 0 {
+		// parent exists — good
+	} else {
+		t.Errorf("parent directory %s should exist after OpenSQLite", parent)
+	}
+
+	// DB should work — table exists.
+	var name string
+	if err := db.QueryRow(
+		"SELECT name FROM sqlite_master WHERE type='table' AND name='san_pham_so'",
+	).Scan(&name); err != nil {
+		t.Errorf("expected san_pham_so table to exist: %v", err)
+	}
+}
+
 func TestOpenSQLite_CreatesSchemaAndSetsPragmas(t *testing.T) {
 	db, err := OpenSQLite(filepath.Join(t.TempDir(), "catalog.db"))
 	if err != nil {
