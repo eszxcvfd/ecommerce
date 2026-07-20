@@ -28,7 +28,7 @@ func handleReadyz(w http.ResponseWriter, r *http.Request, check func() error) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := check(); err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "error": err.Error()})
+		json.NewEncoder(w).Encode(map[string]string{"status": "not_ready"})
 		return
 	}
 	w.WriteHeader(http.StatusOK)

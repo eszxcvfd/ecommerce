@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -57,9 +58,10 @@ func TestHealthEndpoints(t *testing.T) {
 		}
 	})
 
-	t.Run("GET /readyz with unhealthy check returns 503", func(t *testing.T) {
+	t.Run("GET /readyz with unhealthy check returns 503 without leaking raw error text", func(t *testing.T) {
 		mux := http.NewServeMux()
-		RegisterHealthRoutes(mux, func() error { return errors.New("db not ready") })
+		rawErr := "sql: /var/data/db.sqlite3: disk I/O error"
+		RegisterHealthRoutes(mux, func() error { return errors.New(rawErr) })
 		ts := httptest.NewServer(mux)
 		defer ts.Close()
 
@@ -72,12 +74,21 @@ func TestHealthEndpoints(t *testing.T) {
 		if res.StatusCode != http.StatusServiceUnavailable {
 			t.Fatalf("expected 503, got %d", res.StatusCode)
 		}
-		var body map[string]string
+		var body map[string]interface{}
 		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 			t.Fatal(err)
 		}
 		if body["status"] != "not_ready" {
 			t.Errorf("expected status 'not_ready', got %q", body["status"])
 		}
+		if errStr, ok := body["error"].(string); ok {
+			if errStr == rawErr {
+				t.Errorf("/readyz leaked raw check error text: %q", rawErr)
+			}
+			if strings.Contains(errStr, "/var/data/") {
+				t.Errorf("/readyz leaked filesystem path in error: %q", errStr)
+			}
+		}
 	})
+
 }

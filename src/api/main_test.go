@@ -17,9 +17,14 @@ func TestProductionEntrypointServesDeterministicSeed(t *testing.T) {
 	}
 	defer os.Remove(bin)
 
-	// Start on a free-ish port
+	// Start on a free-ish port with required env vars
 	cmd := exec.Command(bin)
-	cmd.Env = append(os.Environ(), "API_PORT=19999")
+	dbPath := t.TempDir() + "/test.sqlite3"
+	cmd.Env = append(os.Environ(),
+		"API_PORT=19999",
+		"APP_ENV=development",
+		"SQLITE_DB_PATH="+dbPath,
+	)
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -38,10 +43,10 @@ func TestProductionEntrypointServesDeterministicSeed(t *testing.T) {
 		SanPham []struct{ ID string } `json:"san_pham"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		t.Fatal(err)
+		t.Fatalf("valid JSON response expected: %v", err)
 	}
 
 	if len(body.SanPham) != 12 {
-		t.Fatalf("expected 12 products from production entrypoint, got %d — main.go likely passes nil instead of SeedData()", len(body.SanPham))
+		t.Fatalf("expected 12 products from development entrypoint (auto-seeded via SeedSQLite), got %d", len(body.SanPham))
 	}
 }

@@ -39,6 +39,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("open SQLite: %v", err)
 		}
+		if err := catalog.SeedSQLite(db); err != nil {
+			log.Fatalf("seed: %v", err)
+		}
 		checkReady = func() error { return catalog.VerifySchema(db) }
 		log.Printf("Development mode — database at %s", dbPath)
 	} else {

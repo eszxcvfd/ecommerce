@@ -172,7 +172,6 @@ func seedSQLite(t *testing.T, db *sql.DB) {
 	}
 }
 
-
 // openSQLiteAndSeed opens a temp SQLite database, runs migrations, and seeds it.
 func openSQLiteAndSeed(t *testing.T) *sql.DB {
 	t.Helper()
