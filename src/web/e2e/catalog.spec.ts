@@ -86,6 +86,25 @@ test.describe('Public catalog page', () => {
     await page.locator('.catalog__filter-btn', { hasText: 'Tất cả' }).click()
     await expect(cards).toHaveCount(12)
   })
+
+  test('clicking a product card navigates to its detail page', async ({ page }) => {
+    const cards = page.locator('.product-card')
+    await expect(cards).toHaveCount(12)
+
+    // Get the first card's link href before clicking
+    const firstCard = cards.first()
+    const href = await firstCard.getAttribute('href')
+    expect(href).toMatch(/^\/san-pham\//)
+
+    // Click the first product card
+    await firstCard.click()
+
+    // Should navigate to the detail page
+    await expect(page).toHaveURL(new RegExp(href!))
+
+    // Product detail page should show the product title
+    await expect(page.locator('.product-detail__title')).toBeVisible()
+  })
 })
 
 test.describe('Search and sort', () => {

@@ -1,5 +1,5 @@
 <template>
-  <article class="product-card">
+  <NuxtLink :to="'/san-pham/' + product.id" class="product-card product-card__link">
     <div class="product-card__image">
       <img
         v-if="product.anh_demo"
@@ -48,7 +48,7 @@
         </span>
       </div>
     </div>
-  </article>
+  </NuxtLink>
 </template>
 
 <script setup lang="ts">
@@ -76,7 +76,14 @@ function renderStars(rating: number): string {
 }
 </script>
 
+
 <style scoped>
+.product-card__link {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
 .product-card {
   background: var(--color-surface);
   border-radius: var(--radius);
