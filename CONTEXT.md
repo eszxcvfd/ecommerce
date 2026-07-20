@@ -99,12 +99,19 @@ _Avoid_: Tài khoản người bán riêng.
 
 **Quyết định**: Giữ hệ thống ở dạng modular monolith với các module theo vertical slice, hiện tại là `catalog`. Sử dụng Ports & Adapters ở những seam có biến thể thật. Chưa chuyển toàn bộ sang Clean Architecture nhiều tầng và chưa tách thành microservices.
 
-**Lý do**: Domain hiện còn nhỏ, API chưa có nhu cầu deploy hoặc scale độc lập, và chưa có nhiều storage adapter. Việc tạo sớm các lớp `entities`, `usecases`, `interfaces`, `infrastructure` dễ tạo module nông, boilerplate và mapping không cần thiết.
+**Lý do**: Domain hiện còn nhỏ và chưa cần deploy/scale từng module độc lập. SQLite là storage chính thức phù hợp với topology một API instance, trong khi việc tạo sớm các lớp `entities`, `usecases`, `interfaces`, `infrastructure` vẫn dễ tạo module nông, boilerplate và mapping không cần thiết.
 
 **Nguyên tắc áp dụng**:
 - Giữ `catalog` làm module chính; `main.go` là composition root.
+- SQLite adapter nằm trong module `catalog`; in-memory chỉ là adapter test.
+- Giữ `CatalogRepository` làm storage port; không để SQLite-specific types/SQL rò vào domain/API.
 - Chỉ thêm application/use-case layer khi xuất hiện workflow nghiệp vụ thực sự như duyệt sản phẩm, đơn hàng, thanh toán Xu hoặc quyền tải xuống.
-- Khi có database adapter thứ hai, làm rõ seam storage và đưa chính sách sản phẩm công khai vào interface/use case có tên rõ nghĩa.
 - Không chọn microservices cho đến khi có nhu cầu deploy, scale hoặc ownership độc lập.
 
-**Điều kiện xem xét lại**: Có nhiều workflow nghiệp vụ, nhiều adapter, thay đổi thường xuyên xuyên qua nhiều module, hoặc cần deploy/scale từng phần độc lập.
+**Điều kiện xem xét lại**: Nhiều writers/replicas, shared multi-host writes, lock contention, HA/read replicas, hoặc workflow giao dịch vượt khả năng vận hành an toàn của SQLite.
+
+### SQLite là database chính
+- **Trạng thái**: Đã quyết định — 2026-07-20
+- **ADR**: [`docs/adr/0001-sqlite-primary-database.md`](docs/adr/0001-sqlite-primary-database.md)
+- **Runbook**: [`docs/operations/sqlite.md`](docs/operations/sqlite.md)
+- **Tóm tắt**: SQLite là storage mặc định cho development và production, tách database theo môi trường. Production chạy một API instance trên persistent volume; dev/test có thể dùng seed và in-memory adapter theo contract tests.

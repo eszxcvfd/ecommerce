@@ -18,3 +18,9 @@ src/web/node_modules/
 
 # Tooling – scrapers, fixtures, design tool outputs (not committed)
 /tool/
+
+# Local SQLite databases and backups
+var/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
