@@ -286,3 +286,38 @@ func batchLoadDinhDang(db *sql.DB, ids []string) (map[string][]string, error) {
 	}
 	return result, rows.Err()
 }
+
+// OpenSQLiteProd opens a SQLite database with production settings.
+// It applies runtime PRAGMAs, restricts to a single writer, and verifies
+// that all embedded migrations have been applied (without running them).
+// This is the production counterpart of OpenSQLite (which auto-migrates).
+func OpenSQLiteProd(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite: %w", err)
+	}
+
+	pragmas := []struct {
+		stmt string
+		name string
+	}{
+		{"PRAGMA foreign_keys = ON", "foreign_keys"},
+		{"PRAGMA journal_mode = WAL", "journal_mode"},
+		{fmt.Sprintf("PRAGMA busy_timeout = %d", defaultBusyTimeout), "busy_timeout"},
+		{"PRAGMA synchronous = NORMAL", "synchronous"},
+	}
+	for _, p := range pragmas {
+		if _, err := db.Exec(p.stmt); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("set pragma %s: %w", p.name, err)
+		}
+	}
+	db.SetMaxOpenConns(1)
+
+	if err := VerifySchema(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("verify schema: %w", err)
+	}
+
+	return db, nil
+}

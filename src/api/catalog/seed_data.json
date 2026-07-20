@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "products": [
+    {
+      "id": "sp-001",
+      "ten": "Bản vẽ nhà phố 3 tầng",
+      "mo_ta": "Bản vẽ kiến trúc nhà phố 3 tầng, bao gồm mặt bằng, mặt đứng, mặt cắt.",
+      "anh_demo": "/images/nha-pho.jpg",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "kiến trúc",
+      "dinh_dang": [
+        "dwg",
+        "pdf"
+      ],
+      "diem_danh_gia": 4.5,
+      "so_luong_danh_gia": 12,
+      "ngay_tao": "2026-07-01T00:00:00Z",
+      "so_luot_tai": 120,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-017",
+      "ten": "Mẫu vách CNC đồng tiền hiện đại",
+      "mo_ta": "Mẫu vách CNC trang trí nội thất với hoa văn đồng tiền hiện đại, tệp DXF.",
+      "anh_demo": "https://www.filethietke.vn/FilesUpload/Code/mau-vach-cnc-dong-tien-hien-dai-16434.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 100
+      },
+      "danh_muc": "cơ khí",
+      "dinh_dang": [
+        "dxf"
+      ],
+      "diem_danh_gia": 5,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-02T00:00:00Z",
+      "so_luot_tai": 45,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-003",
+      "ten": "Sơ đồ mạch Arduino điều khiển LED",
+      "mo_ta": "Sơ đồ nguyên lý và bố trí bo mạch Arduino cho dự án điều khiển LED RGB.",
+      "anh_demo": "/images/arduino-led.jpg",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "điện tử",
+      "dinh_dang": [
+        "brd",
+        "sch"
+      ],
+      "diem_danh_gia": 3.8,
+      "so_luong_danh_gia": 5,
+      "ngay_tao": "2026-07-03T00:00:00Z",
+      "so_luot_tai": 230,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-004",
+      "ten": "Bộ icon phong cách tối giản",
+      "mo_ta": "Bộ 200 icon phong cách tối giản, phù hợp cho web và ứng dụng di động.",
+      "anh_demo": "/images/icon-set.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 5000
+      },
+      "danh_muc": "đồ họa",
+      "dinh_dang": [
+        "svg",
+        "png",
+        "ai"
+      ],
+      "diem_danh_gia": 4.2,
+      "so_luong_danh_gia": 8,
+      "ngay_tao": "2026-07-04T00:00:00Z",
+      "so_luot_tai": 310,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-005",
+      "ten": "Đồ án thiết kế cầu dầm BTCT",
+      "mo_ta": "Đồ án tốt nghiệp thiết kế cầu dầm bê tông cốt thép, bao gồm bản vẽ và thuyết minh.",
+      "anh_demo": "/images/cau-dam.jpg",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "đồ án",
+      "dinh_dang": [
+        "pdf",
+        "dwg"
+      ],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-05T00:00:00Z",
+      "so_luot_tai": 89,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-006",
+      "ten": "Luận văn thạc sĩ AI trong xây dựng",
+      "mo_ta": "Luận văn thạc sĩ về ứng dụng trí tuệ nhân tạo trong quản lý dự án xây dựng.",
+      "anh_demo": "/images/luanvan-ai.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 30000
+      },
+      "danh_muc": "luận văn",
+      "dinh_dang": [
+        "pdf",
+        "docx"
+      ],
+      "diem_danh_gia": 5,
+      "so_luong_danh_gia": 3,
+      "ngay_tao": "2026-07-06T00:00:00Z",
+      "so_luot_tai": 67,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-011",
+      "ten": "Phối cảnh khu nghỉ dưỡng",
+      "mo_ta": "Phối cảnh 3D khu nghỉ dưỡng cao cấp, file SketchUp và hình ảnh render.",
+      "anh_demo": "/images/khu-nghi-duong.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 25000
+      },
+      "danh_muc": "kiến trúc",
+      "dinh_dang": [
+        "skp",
+        "png"
+      ],
+      "diem_danh_gia": 4,
+      "so_luong_danh_gia": 7,
+      "ngay_tao": "2026-07-07T00:00:00Z",
+      "so_luot_tai": 43,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-018",
+      "ten": "Mẫu vách cổng CNC cây nghệ thuật",
+      "mo_ta": "Mẫu vách cổng CNC thiết kế cây nghệ thuật, phù hợp trang trí sân vườn.",
+      "anh_demo": "https://www.filethietke.vn/FilesUpload/Code/mau-vach-cong-cnc-cay-nghe-thuat-164126.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 100
+      },
+      "danh_muc": "cơ khí",
+      "dinh_dang": [
+        "dxf"
+      ],
+      "diem_danh_gia": 5,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-08T00:00:00Z",
+      "so_luot_tai": 32,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-013",
+      "ten": "Sơ đồ nguyên lý nguồn 5V",
+      "mo_ta": "Sơ đồ nguyên lý mạch nguồn 5V ổn áp, bao gồm sơ đồ mạch in và danh sách linh kiện.",
+      "anh_demo": "/images/nguon-5v.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 8000
+      },
+      "danh_muc": "điện tử",
+      "dinh_dang": [
+        "pdf",
+        "sch"
+      ],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-09T00:00:00Z",
+      "so_luot_tai": 156,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-014",
+      "ten": "Template thiết kế brochure",
+      "mo_ta": "Template brochure đa năng cho doanh nghiệp, thiết kế chuyên nghiệp dễ chỉnh sửa.",
+      "anh_demo": "/images/brochure.jpg",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "đồ họa",
+      "dinh_dang": [
+        "ai",
+        "psd"
+      ],
+      "diem_danh_gia": 4.8,
+      "so_luong_danh_gia": 15,
+      "ngay_tao": "2026-07-10T00:00:00Z",
+      "so_luot_tai": 520,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-015",
+      "ten": "Đồ án tốt nghiệp phần mềm quản lý thư viện",
+      "mo_ta": "Đồ án tốt nghiệp xây dựng phần mềm quản lý thư viện, đầy đủ báo cáo và mã nguồn.",
+      "anh_demo": "/images/qly-thu-vien.jpg",
+      "gia": {
+        "mien_phi": false,
+        "so_xu": 20000
+      },
+      "danh_muc": "đồ án",
+      "dinh_dang": [
+        "pdf"
+      ],
+      "diem_danh_gia": 3.5,
+      "so_luong_danh_gia": 2,
+      "ngay_tao": "2026-07-11T00:00:00Z",
+      "so_luot_tai": 78,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-016",
+      "ten": "Luận văn cử nhân kinh tế xây dựng",
+      "mo_ta": "Luận văn cử nhân ngành kinh tế xây dựng, phân tích thị trường bất động sản.",
+      "anh_demo": "/images/luanvan-kinh-te.jpg",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "luận văn",
+      "dinh_dang": [
+        "pdf",
+        "docx"
+      ],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-12T00:00:00Z",
+      "so_luot_tai": 94,
+      "trang_thai": "approved"
+    },
+    {
+      "id": "sp-007",
+      "ten": "Bản nháp chưa duyệt",
+      "mo_ta": "",
+      "anh_demo": "",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "kiến trúc",
+      "dinh_dang": [],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-01T00:00:00Z",
+      "so_luot_tai": 0,
+      "trang_thai": "draft"
+    },
+    {
+      "id": "sp-008",
+      "ten": "Đang chờ duyệt",
+      "mo_ta": "",
+      "anh_demo": "",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "cơ khí",
+      "dinh_dang": [],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-01T00:00:00Z",
+      "so_luot_tai": 0,
+      "trang_thai": "pending"
+    },
+    {
+      "id": "sp-009",
+      "ten": "Sản phẩm bị từ chối",
+      "mo_ta": "",
+      "anh_demo": "",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "điện tử",
+      "dinh_dang": [],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-01T00:00:00Z",
+      "so_luot_tai": 0,
+      "trang_thai": "rejected"
+    },
+    {
+      "id": "sp-010",
+      "ten": "Sản phẩm bị ẩn sau vi phạm",
+      "mo_ta": "",
+      "anh_demo": "",
+      "gia": {
+        "mien_phi": true
+      },
+      "danh_muc": "đồ họa",
+      "dinh_dang": [],
+      "diem_danh_gia": 0,
+      "so_luong_danh_gia": 0,
+      "ngay_tao": "2026-07-01T00:00:00Z",
+      "so_luot_tai": 0,
+      "trang_thai": "hidden"
+    }
+  ]
+}

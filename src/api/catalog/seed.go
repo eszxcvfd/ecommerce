@@ -2,8 +2,13 @@ package catalog
 
 import (
 	"database/sql"
+	_ "embed"
+	"fmt"
 	"time"
 )
+
+//go:embed seed_data.json
+var seedDataJSON []byte
 
 // SeedData returns a deterministic dataset for local/demo API and e2e tests.
 // It covers:
@@ -25,7 +30,6 @@ func SeedData() []SanPhamSo {
 			NgayTao: time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC), SoLuotTai: 120,
 		},
 		{
-			// Source: filethietke.vn — https://www.filethietke.vn/file-thiet-ke/mau-vach-cnc-dong-tien-hien-dai-222776.htm
 			ID: "sp-017", Ten: "Mẫu vách CNC đồng tiền hiện đại",
 			MoTa:    "Mẫu vách CNC trang trí nội thất với hoa văn đồng tiền hiện đại, tệp DXF.",
 			AnhDemo: "https://www.filethietke.vn/FilesUpload/Code/mau-vach-cnc-dong-tien-hien-dai-16434.jpg",
@@ -87,7 +91,6 @@ func SeedData() []SanPhamSo {
 			NgayTao: time.Date(2026, 7, 7, 0, 0, 0, 0, time.UTC), SoLuotTai: 43,
 		},
 		{
-			// Source: filethietke.vn — https://www.filethietke.vn/file-thiet-ke/mau-vach-cong-cnc-cay-nghe-thuat-222775.htm
 			ID: "sp-018", Ten: "Mẫu vách cổng CNC cây nghệ thuật",
 			MoTa:    "Mẫu vách cổng CNC thiết kế cây nghệ thuật, phù hợp trang trí sân vườn.",
 			AnhDemo: "https://www.filethietke.vn/FilesUpload/Code/mau-vach-cong-cnc-cay-nghe-thuat-164126.jpg",
@@ -161,13 +164,51 @@ func SeedData() []SanPhamSo {
 	}
 }
 
-// SeedSQLite inserts the catalog seed data into the given SQLite database.
-// This is used by the e2e testserver to bootstrap a fresh database.
+// SeedFromJSON parses the embedded versioned JSON contract and returns the seed products.
+// It validates the JSON and reports errors for corrupt embedded data.
+func SeedFromJSON() ([]SanPhamSo, error) {
+	cf, err := ValidateCatalogJSON(seedDataJSON)
+	if err != nil {
+		return nil, fmt.Errorf("embedded seed JSON: %w", err)
+	}
+	products := make([]SanPhamSo, len(cf.Products))
+	for i, cp := range cf.Products {
+		sp, err := cp.ToSanPhamSo()
+		if err != nil {
+			return nil, fmt.Errorf("convert product[%d]: %w", i, err)
+		}
+		products[i] = sp
+	}
+	return products, nil
+}
+
+// SeedSQLite inserts seed data into the given SQLite database when it is empty.
+// It uses the embedded versioned JSON contract. If the database already contains
+// products, it skips seeding (idempotent on non-empty databases).
 func SeedSQLite(db *sql.DB) error {
-	products := SeedData()
+	// Check if the database already has products.
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM san_pham_so").Scan(&count); err != nil {
+		return fmt.Errorf("check seed count: %w", err)
+	}
+	if count > 0 {
+		return nil // already seeded, skip
+	}
+
+	products, err := SeedFromJSON()
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin seed tx: %w", err)
+	}
+	defer tx.Rollback()
+
 	for _, p := range products {
-		_, err := db.Exec(`
-			INSERT OR IGNORE INTO san_pham_so (id, ten, mo_ta, anh_demo, mien_phi, so_xu, danh_muc,
+		_, err := tx.Exec(`
+			INSERT INTO san_pham_so (id, ten, mo_ta, anh_demo, mien_phi, so_xu, danh_muc,
 			                         diem_danh_gia, so_luong_danh_gia, ngay_tao, so_luot_tai, trang_thai,
 			                         ten_search, mo_ta_search)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -177,19 +218,20 @@ func SeedSQLite(db *sql.DB) error {
 			normalizeSearch(p.Ten), normalizeSearch(p.MoTa),
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("insert seed product %s: %w", p.ID, err)
 		}
 		for _, ext := range p.DinhDang {
-			_, err := db.Exec(
+			_, err := tx.Exec(
 				"INSERT OR IGNORE INTO san_pham_dinh_dang (san_pham_id, dinh_dang) VALUES (?, ?)",
 				p.ID, ext,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("insert format %s for %s: %w", ext, p.ID, err)
 			}
 		}
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 func boolToInt(b bool) int {
