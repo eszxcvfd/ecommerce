@@ -7,79 +7,7 @@ import (
 	"testing"
 )
 
-// seedProducts returns deterministic test data covering:
-//   - All six categories
-//   - Products with free and paid prices
-//   - Products with/without ratings
-//   - Products that should NOT appear (draft, pending, rejected, hidden)
-func seedProducts() []SanPhamSo {
-	return []SanPhamSo{
-		// --- Approved products (should appear) ---
-		{
-			ID: "sp-001", Ten: "Bản vẽ nhà phố 3 tầng",
-			AnhDemo: "/images/nha-pho.jpg",
-			Gia:     Gia{MienPhi: true},
-			DanhMuc: DanhMucKienTruc, TrangThai: TrangThaiDaDuyet,
-			DiemDanhGia: 4.5, SoLuongDanhGia: 12,
-		},
-		{
-			ID: "sp-002", Ten: "Mô hình khung thép tiền chế",
-			AnhDemo: "/images/khung-thep.jpg",
-			Gia:     Gia{MienPhi: false, SoXu: 15000},
-			DanhMuc: DanhMucCoKhi, TrangThai: TrangThaiDaDuyet,
-			DiemDanhGia: 0, SoLuongDanhGia: 0,
-		},
-		{
-			ID: "sp-003", Ten: "Sơ đồ mạch Arduino điều khiển LED",
-			AnhDemo: "/images/arduino-led.jpg",
-			Gia:     Gia{MienPhi: true},
-			DanhMuc: DanhMucDienTu, TrangThai: TrangThaiDaDuyet,
-			DiemDanhGia: 3.8, SoLuongDanhGia: 5,
-		},
-		{
-			ID: "sp-004", Ten: "Bộ icon phong cách tối giản",
-			AnhDemo: "/images/icon-set.jpg",
-			Gia:     Gia{MienPhi: false, SoXu: 5000},
-			DanhMuc: DanhMucDoHoa, TrangThai: TrangThaiDaDuyet,
-			DiemDanhGia: 4.2, SoLuongDanhGia: 8,
-		},
-		{
-			ID: "sp-005", Ten: "Đồ án thiết kế cầu dầm BTCT",
-			AnhDemo: "/images/cau-dam.jpg",
-			Gia:     Gia{MienPhi: true},
-			DanhMuc: DanhMucDoAn, TrangThai: TrangThaiDaDuyet,
-			DiemDanhGia: 0, SoLuongDanhGia: 0,
-		},
-		{
-			ID: "sp-006", Ten: "Luận văn thạc sĩ AI trong xây dựng",
-			AnhDemo: "/images/luanvan-ai.jpg",
-			Gia:     Gia{MienPhi: false, SoXu: 30000},
-			DanhMuc: DanhMucLuanVan, TrangThai: TrangThaiDaDuyet,
-			DiemDanhGia: 5.0, SoLuongDanhGia: 3,
-		},
-		// --- Non-approved products (must NOT appear) ---
-		{
-			ID: "sp-007", Ten: "Draft product",
-			AnhDemo: "", Gia: Gia{MienPhi: true},
-			DanhMuc: DanhMucKienTruc, TrangThai: TrangThaiDangSoan,
-		},
-		{
-			ID: "sp-008", Ten: "Pending review product",
-			AnhDemo: "", Gia: Gia{MienPhi: true},
-			DanhMuc: DanhMucCoKhi, TrangThai: TrangThaiChoDuyet,
-		},
-		{
-			ID: "sp-009", Ten: "Rejected product",
-			AnhDemo: "", Gia: Gia{MienPhi: true},
-			DanhMuc: DanhMucDienTu, TrangThai: TrangThaiBiTuChoi,
-		},
-		{
-			ID: "sp-010", Ten: "Hidden product after violation",
-			AnhDemo: "", Gia: Gia{MienPhi: true},
-			DanhMuc: DanhMucDoHoa, TrangThai: TrangThaiBiAn,
-		},
-	}
-}
+func seedProducts() []SanPhamSo { return SeedData() }
 
 func TestCatalogEndpoints(t *testing.T) {
 	repo := NewMemoryRepo(seedProducts())
@@ -134,9 +62,9 @@ func TestCatalogEndpoints(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Must include all 6 approved products
-		if len(body.SanPham) != 6 {
-			t.Fatalf("expected 6 approved products, got %d", len(body.SanPham))
+		// Must include all 12 approved products
+		if len(body.SanPham) != 12 {
+			t.Fatalf("expected 12 approved products, got %d", len(body.SanPham))
 		}
 
 		// Must not include any non-approved product IDs
@@ -156,6 +84,18 @@ func TestCatalogEndpoints(t *testing.T) {
 			}
 			// AnhDemo, Gia are expected but some approved products have empty demo — acceptable in seed
 		}
+
+		// Must include filethietke.vn-backed product from seed
+		foundFT := false
+		for _, sp := range body.SanPham {
+			if sp.Ten == "Mẫu vách CNC đồng tiền hiện đại" {
+				foundFT = true
+				break
+			}
+		}
+		if !foundFT {
+			t.Error("expected filethietke.vn product 'Mẫu vách CNC đồng tiền hiện đại' in approved list")
+		}
 	})
 
 	t.Run("GET /api/v1/san-pham serves valid JSON", func(t *testing.T) {
@@ -174,4 +114,39 @@ func TestCatalogEndpoints(t *testing.T) {
 			t.Errorf("expected application/json, got %q", ct)
 		}
 	})
+}
+
+func TestCatalogHasAtLeastTwoPerCategory(t *testing.T) {
+	repo := NewMemoryRepo(seedProducts())
+	mux := http.NewServeMux()
+	RegisterRoutes(mux, repo)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	res, err := http.Get(ts.URL + "/api/v1/san-pham")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	var body struct {
+		SanPham []SanPhamSo `json:"san_pham"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+
+	// Group products by category
+	byCategory := make(map[DanhMuc][]SanPhamSo)
+	for _, sp := range body.SanPham {
+		byCategory[sp.DanhMuc] = append(byCategory[sp.DanhMuc], sp)
+	}
+
+	// Each of the six categories must have at least 2 approved products
+	for _, dm := range AllDanhMuc {
+		products := byCategory[dm]
+		if len(products) < 2 {
+			t.Errorf("category %q has %d approved product(s), want at least 2", dm, len(products))
+		}
+	}
 }

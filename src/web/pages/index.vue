@@ -21,13 +21,22 @@
     <section v-if="fullyLoaded" class="catalog__categories">
       <h2 class="catalog__section-title">Danh mục</h2>
       <div class="catalog__category-grid">
-        <div
+        <button
+          class="catalog__filter-btn"
+          :aria-pressed="activeDanhMuc === null"
+          @click="activeDanhMuc = null"
+        >
+          Tất cả
+        </button>
+        <button
           v-for="dm in danhMuc"
           :key="dm"
           class="catalog__category-card"
+          :aria-pressed="activeDanhMuc === dm"
+          @click="activeDanhMuc = dm"
         >
           {{ dm }}
-        </div>
+        </button>
       </div>
     </section>
 
@@ -35,13 +44,17 @@
     <section v-if="fullyLoaded" class="catalog__products">
       <h2 class="catalog__section-title">Sản phẩm số</h2>
 
-      <div v-if="sanPham.length === 0" class="catalog__empty">
+      <div v-if="sanPham.length === 0 && filteredSanPham.length === 0" class="catalog__empty">
         <p>Không có Sản phẩm số nào.</p>
+      </div>
+
+      <div v-else-if="filteredSanPham.length === 0" class="catalog__empty">
+        <p>Không có Sản phẩm số nào trong danh mục này.</p>
       </div>
 
       <div v-else class="catalog__product-grid">
         <ProductCard
-          v-for="sp in sanPham"
+          v-for="sp in filteredSanPham"
           :key="sp.id"
           :product="sp"
         />
@@ -53,8 +66,14 @@
 <script setup lang="ts">
 import { useDanhMuc, useSanPham } from '~/composables/useCatalog'
 
-const { data: danhMuc, error: catError, loaded: catLoaded } = await useDanhMuc()
 const { data: sanPham, error: prodError, loaded: prodLoaded } = await useSanPham()
+const { data: danhMuc, error: catError, loaded: catLoaded } = await useDanhMuc()
+
+const activeDanhMuc = ref<string | null>(null)
+const filteredSanPham = computed(() => {
+  if (activeDanhMuc.value === null) return sanPham.value
+  return sanPham.value.filter(sp => sp.danh_muc === activeDanhMuc.value)
+})
 
 const hasError = computed(() => !!(catError.value || prodError.value))
 const fullyLoaded = computed(() => catLoaded.value && prodLoaded.value)
@@ -95,6 +114,29 @@ const fullyLoaded = computed(() => catLoaded.value && prodLoaded.value)
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
+}
+
+.catalog__filter-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+}
+
+.catalog__category-card {
+  cursor: pointer;
+}
+
+.catalog__filter-btn[aria-pressed="true"],
+.catalog__category-card[aria-pressed="true"] {
+  background: var(--color-primary, #2563eb);
+  color: white;
+  border-color: var(--color-primary, #2563eb);
 }
 
 .catalog__category-grid {

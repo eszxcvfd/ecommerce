@@ -90,3 +90,21 @@ _Avoid_: Tài khoản mua và tài khoản bán tách biệt.
 **Hồ sơ người bán**:
 Phần thông tin và trạng thái bán hàng được kích hoạt trên một Tài khoản khi người dùng muốn đăng Sản phẩm số và nhận doanh thu.
 _Avoid_: Tài khoản người bán riêng.
+
+## Architectural Decisions
+
+### Modular monolith với Ports & Adapters thực dụng
+
+**Trạng thái**: Đã quyết định — 2026-07-20
+
+**Quyết định**: Giữ hệ thống ở dạng modular monolith với các module theo vertical slice, hiện tại là `catalog`. Sử dụng Ports & Adapters ở những seam có biến thể thật. Chưa chuyển toàn bộ sang Clean Architecture nhiều tầng và chưa tách thành microservices.
+
+**Lý do**: Domain hiện còn nhỏ, API chưa có nhu cầu deploy hoặc scale độc lập, và chưa có nhiều storage adapter. Việc tạo sớm các lớp `entities`, `usecases`, `interfaces`, `infrastructure` dễ tạo module nông, boilerplate và mapping không cần thiết.
+
+**Nguyên tắc áp dụng**:
+- Giữ `catalog` làm module chính; `main.go` là composition root.
+- Chỉ thêm application/use-case layer khi xuất hiện workflow nghiệp vụ thực sự như duyệt sản phẩm, đơn hàng, thanh toán Xu hoặc quyền tải xuống.
+- Khi có database adapter thứ hai, làm rõ seam storage và đưa chính sách sản phẩm công khai vào interface/use case có tên rõ nghĩa.
+- Không chọn microservices cho đến khi có nhu cầu deploy, scale hoặc ownership độc lập.
+
+**Điều kiện xem xét lại**: Có nhiều workflow nghiệp vụ, nhiều adapter, thay đổi thường xuyên xuyên qua nhiều module, hoặc cần deploy/scale từng phần độc lập.

@@ -15,3 +15,6 @@ src/web/test-results/
 
 # Node
 src/web/node_modules/
+
+# Tooling – scrapers, fixtures, design tool outputs (not committed)
+/tool/
