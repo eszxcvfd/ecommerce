@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -747,6 +748,81 @@ func TestCatalogTimestampRFC3339(t *testing.T) {
 						i, sp.ID, tm.Format(time.RFC3339), i-1, body.SanPham[i-1].ID, prev.Format(time.RFC3339))
 				}
 			}
+		}
+	})
+}
+
+// errRepo is a CatalogRepository stub that always returns errors.
+// Used to test HTTP error handling for storage failures.
+type errRepo struct{}
+
+func (errRepo) Products() ([]SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+func (errRepo) Search(CatalogQuery) ([]SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+func TestCatalogStorageError_Returns500(t *testing.T) {
+	mux := http.NewServeMux()
+	RegisterRoutes(mux, errRepo{})
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	t.Run("GET /api/v1/san-pham returns 500 storage_unavailable", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", res.StatusCode)
+		}
+		var body map[string]string
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body["error"] != "storage_unavailable" {
+			t.Errorf("expected error 'storage_unavailable', got %q", body["error"])
+		}
+		if body["message"] == "" {
+			t.Error("expected non-empty error message")
+		}
+		// Must not leak SQL or paths
+		if body["message"] == "simulated disk failure" {
+			t.Error("error message must not leak raw driver error")
+		}
+	})
+
+	t.Run("GET /api/v1/danh-muc returns 200 even with erroring repo", func(t *testing.T) {
+		// danh-muc is static, doesn't use the repo
+		res, err := http.Get(ts.URL + "/api/v1/danh-muc")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("GET /api/v1/dinh-dang returns 500 storage_unavailable", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/dinh-dang")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", res.StatusCode)
+		}
+		var body map[string]string
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body["error"] != "storage_unavailable" {
+			t.Errorf("expected error 'storage_unavailable', got %q", body["error"])
 		}
 	})
 }

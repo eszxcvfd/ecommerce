@@ -11,12 +11,11 @@ import (
 )
 
 // CatalogRepository is the seam for product data access.
-// The API behavior test injects a seeded in-memory implementation.
 type CatalogRepository interface {
 	// Products returns only approved (public) products.
-	Products() []SanPhamSo
+	Products() ([]SanPhamSo, error)
 	// Search returns approved products matching the given query, sorted accordingly.
-	Search(query CatalogQuery) []SanPhamSo
+	Search(query CatalogQuery) ([]SanPhamSo, error)
 }
 
 // memoryRepo holds in-memory product data.
@@ -29,7 +28,7 @@ func NewMemoryRepo(products []SanPhamSo) CatalogRepository {
 	return &memoryRepo{products: products}
 }
 
-func (r *memoryRepo) Products() []SanPhamSo {
+func (r *memoryRepo) Products() ([]SanPhamSo, error) {
 	// Return only approved/public products
 	var result []SanPhamSo
 	for _, p := range r.products {
@@ -37,13 +36,16 @@ func (r *memoryRepo) Products() []SanPhamSo {
 			result = append(result, p)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // Search returns approved products filtered and sorted by the given query.
-func (r *memoryRepo) Search(query CatalogQuery) []SanPhamSo {
+func (r *memoryRepo) Search(query CatalogQuery) ([]SanPhamSo, error) {
 	// Start with all approved products
-	candidates := r.Products()
+	candidates, err := r.Products()
+	if err != nil {
+		return nil, err
+	}
 
 	// Apply text search (q)
 	if query.Q != "" {
@@ -159,7 +161,7 @@ func (r *memoryRepo) Search(query CatalogQuery) []SanPhamSo {
 		})
 	}
 
-	return candidates
+	return candidates, nil
 }
 
 // normalizeSearch normalizes Vietnamese text for case-insensitive, accent-insensitive matching.

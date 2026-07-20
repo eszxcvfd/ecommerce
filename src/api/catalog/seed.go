@@ -1,6 +1,9 @@
 package catalog
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // SeedData returns a deterministic dataset for local/demo API and e2e tests.
 // It covers:
@@ -156,4 +159,42 @@ func SeedData() []SanPhamSo {
 			DanhMuc: DanhMucDoHoa, TrangThai: TrangThaiBiAn,
 		},
 	}
+}
+
+// SeedSQLite inserts the catalog seed data into the given SQLite database.
+// This is used by the e2e testserver to bootstrap a fresh database.
+func SeedSQLite(db *sql.DB) error {
+	products := SeedData()
+	for _, p := range products {
+		_, err := db.Exec(`
+			INSERT OR IGNORE INTO san_pham_so (id, ten, mo_ta, anh_demo, mien_phi, so_xu, danh_muc,
+			                         diem_danh_gia, so_luong_danh_gia, ngay_tao, so_luot_tai, trang_thai,
+			                         ten_search, mo_ta_search)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, p.ID, p.Ten, p.MoTa, p.AnhDemo, boolToInt(p.Gia.MienPhi), p.Gia.SoXu,
+			string(p.DanhMuc), p.DiemDanhGia, p.SoLuongDanhGia,
+			p.NgayTao.Format(time.RFC3339), p.SoLuotTai, string(p.TrangThai),
+			normalizeSearch(p.Ten), normalizeSearch(p.MoTa),
+		)
+		if err != nil {
+			return err
+		}
+		for _, ext := range p.DinhDang {
+			_, err := db.Exec(
+				"INSERT OR IGNORE INTO san_pham_dinh_dang (san_pham_id, dinh_dang) VALUES (?, ?)",
+				p.ID, ext,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

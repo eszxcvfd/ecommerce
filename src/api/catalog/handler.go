@@ -50,7 +50,12 @@ func (h *handler) handleSanPham(w http.ResponseWriter, r *http.Request) {
 
 	// Validate dinh_dang against known formats from approved products
 	if query.DinhDang != "" {
-		formats := deriveFormats(h.repo.Products())
+		allProducts, err := h.repo.Products()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "storage_unavailable", "Không thể truy xuất dữ liệu. Vui lòng thử lại sau.")
+			return
+		}
+		formats := deriveFormats(allProducts)
 		valid := false
 		for _, f := range formats {
 			if f == query.DinhDang {
@@ -104,13 +109,22 @@ func (h *handler) handleSanPham(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_filter", "min_xu không được lớn hơn max_xu")
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	products := h.repo.Search(query)
+	products, err := h.repo.Search(query)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "storage_unavailable", "Không thể truy xuất dữ liệu. Vui lòng thử lại sau.")
+		return
+	}
 	json.NewEncoder(w).Encode(map[string][]SanPhamSo{"san_pham": products})
 }
 
 func (h *handler) handleDinhDang(w http.ResponseWriter, r *http.Request) {
-	products := h.repo.Products()
+	products, err := h.repo.Products()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "storage_unavailable", "Không thể truy xuất dữ liệu. Vui lòng thử lại sau.")
+		return
+	}
 	formats := deriveFormats(products)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string][]string{"dinh_dang": formats})

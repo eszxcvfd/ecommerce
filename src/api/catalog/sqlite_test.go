@@ -172,12 +172,6 @@ func seedSQLite(t *testing.T, db *sql.DB) {
 	}
 }
 
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
 
 // openSQLiteAndSeed opens a temp SQLite database, runs migrations, and seeds it.
 func openSQLiteAndSeed(t *testing.T) *sql.DB {
@@ -195,7 +189,10 @@ func TestSQLiteProducts_ReturnsOnlyApproved(t *testing.T) {
 	db := openSQLiteAndSeed(t)
 	repo := NewSQLiteRepo(db)
 
-	products := repo.Products()
+	products, err := repo.Products()
+	if err != nil {
+		t.Fatalf("Products() failed: %v", err)
+	}
 
 	if len(products) != 12 {
 		t.Fatalf("expected 12 approved products, got %d", len(products))
@@ -222,7 +219,10 @@ func TestSQLiteProducts_PopulatesDinhDang(t *testing.T) {
 	db := openSQLiteAndSeed(t)
 	repo := NewSQLiteRepo(db)
 
-	products := repo.Products()
+	products, err := repo.Products()
+	if err != nil {
+		t.Fatalf("Products() failed: %v", err)
+	}
 
 	// sp-004 (Bộ icon phong cách tối giản) has formats: svg, png, ai
 	found := false
@@ -270,7 +270,10 @@ func TestSQLiteProducts_ReturnsEmptyWhenNoApproved(t *testing.T) {
 	}
 
 	repo := NewSQLiteRepo(db)
-	products := repo.Products()
+	products, err := repo.Products()
+	if err != nil {
+		t.Fatalf("Products() failed: %v", err)
+	}
 	if len(products) != 0 {
 		t.Fatalf("expected 0 approved products, got %d", len(products))
 	}
@@ -281,14 +284,20 @@ func TestSQLiteSearch_TextSearch(t *testing.T) {
 	repo := NewSQLiteRepo(db)
 
 	t.Run("empty query returns all approved products", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{})
+		products, err := repo.Search(CatalogQuery{})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 12 {
 			t.Fatalf("expected 12 products, got %d", len(products))
 		}
 	})
 
 	t.Run("search by name substring", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Q: "CNC"})
+		products, err := repo.Search(CatalogQuery{Q: "CNC"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 2 {
 			t.Fatalf("expected 2 CNC products, got %d", len(products))
 		}
@@ -300,7 +309,10 @@ func TestSQLiteSearch_TextSearch(t *testing.T) {
 	})
 
 	t.Run("search by description content", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Q: "Arduino"})
+		products, err := repo.Search(CatalogQuery{Q: "Arduino"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 1 {
 			t.Fatalf("expected 1 Arduino product, got %d", len(products))
 		}
@@ -310,21 +322,30 @@ func TestSQLiteSearch_TextSearch(t *testing.T) {
 	})
 
 	t.Run("search is case-insensitive", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Q: "arduino"})
+		products, err := repo.Search(CatalogQuery{Q: "arduino"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 1 {
 			t.Fatalf("expected 1 product for lowercase query, got %d", len(products))
 		}
 	})
 
 	t.Run("search is accent-insensitive for Vietnamese", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Q: "xây dựng"})
+		products, err := repo.Search(CatalogQuery{Q: "xây dựng"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) == 0 {
 			t.Fatal("expected at least 1 product matching 'xây dựng'")
 		}
 	})
 
 	t.Run("search with no matches returns empty", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Q: "zzzznotfound"})
+		products, err := repo.Search(CatalogQuery{Q: "zzzznotfound"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 0 {
 			t.Fatalf("expected 0 products, got %d", len(products))
 		}
@@ -336,7 +357,10 @@ func TestSQLiteSearch_Filter(t *testing.T) {
 	repo := NewSQLiteRepo(db)
 
 	t.Run("filter by danh_muc", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{DanhMuc: "kiến trúc"})
+		products, err := repo.Search(CatalogQuery{DanhMuc: "kiến trúc"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 2 {
 			t.Fatalf("expected 2 products in 'kiến trúc', got %d", len(products))
 		}
@@ -348,7 +372,10 @@ func TestSQLiteSearch_Filter(t *testing.T) {
 	})
 
 	t.Run("filter by dinh_dang", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{DinhDang: "dxf"})
+		products, err := repo.Search(CatalogQuery{DinhDang: "dxf"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 2 {
 			t.Fatalf("expected 2 DXF products, got %d", len(products))
 		}
@@ -367,7 +394,10 @@ func TestSQLiteSearch_Filter(t *testing.T) {
 	})
 
 	t.Run("filter by min_xu (paid products over 5000)", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{MinXu: ptrInt64(5000)})
+		products, err := repo.Search(CatalogQuery{MinXu: ptrInt64(5000)})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		for _, p := range products {
 			price := int64(0)
 			if !p.Gia.MienPhi {
@@ -380,7 +410,10 @@ func TestSQLiteSearch_Filter(t *testing.T) {
 	})
 
 	t.Run("filter by max_xu (products under 200)", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{MaxXu: ptrInt64(200)})
+		products, err := repo.Search(CatalogQuery{MaxXu: ptrInt64(200)})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		for _, p := range products {
 			price := int64(0)
 			if !p.Gia.MienPhi {
@@ -393,14 +426,20 @@ func TestSQLiteSearch_Filter(t *testing.T) {
 	})
 
 	t.Run("filter by price range inclusive", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{MinXu: ptrInt64(100), MaxXu: ptrInt64(100)})
+		products, err := repo.Search(CatalogQuery{MinXu: ptrInt64(100), MaxXu: ptrInt64(100)})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 2 {
 			t.Fatalf("expected 2 products priced at 100, got %d", len(products))
 		}
 	})
 
 	t.Run("search + filter combined", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Q: "CNC", DanhMuc: "cơ khí"})
+		products, err := repo.Search(CatalogQuery{Q: "CNC", DanhMuc: "cơ khí"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) != 2 {
 			t.Fatalf("expected 2 CNC products in 'cơ khí', got %d", len(products))
 		}
@@ -414,7 +453,10 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 	repo := NewSQLiteRepo(db)
 
 	t.Run("default sort is newest", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{})
+		products, err := repo.Search(CatalogQuery{})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) < 2 {
 			t.Fatal("need at least 2 products to test sort")
 		}
@@ -425,7 +467,10 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 	})
 
 	t.Run("sort by popular (download count)", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Sort: "popular"})
+		products, err := repo.Search(CatalogQuery{Sort: "popular"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) < 2 {
 			t.Fatal("need at least 2 products to test sort")
 		}
@@ -436,7 +481,10 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 	})
 
 	t.Run("sort by price ascending", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Sort: "price_asc"})
+		products, err := repo.Search(CatalogQuery{Sort: "price_asc"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) < 2 {
 			t.Fatal("need at least 2 products to test sort")
 		}
@@ -447,7 +495,10 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 	})
 
 	t.Run("sort by price descending", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Sort: "price_desc"})
+		products, err := repo.Search(CatalogQuery{Sort: "price_desc"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) < 2 {
 			t.Fatal("need at least 2 products to test sort")
 		}
@@ -458,7 +509,10 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 	})
 
 	t.Run("sort by rating with unrated last", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Sort: "rating"})
+		products, err := repo.Search(CatalogQuery{Sort: "rating"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		if len(products) < 2 {
 			t.Fatal("need at least 2 products to test sort")
 		}
@@ -479,7 +533,10 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 	})
 
 	t.Run("stable tie-break by id for same rating", func(t *testing.T) {
-		products := repo.Search(CatalogQuery{Sort: "rating"})
+		products, err := repo.Search(CatalogQuery{Sort: "rating"})
+		if err != nil {
+			t.Fatalf("Search() failed: %v", err)
+		}
 		// Both unrated: sp-005, sp-013, sp-016 have 0 ratings
 		// They should be sorted by ID: sp-005, sp-013, sp-016
 		unratedIDs := []string{}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -59,6 +60,40 @@ func OpenSQLite(path string) (*sql.DB, error) {
 	return db, nil
 }
 
+// VerifySchema checks that all embedded migrations have been applied.
+// Returns nil if the schema is up to date, or an error listing pending migrations.
+// This is the production counterpart of OpenSQLite's auto-migration: it verifies
+// but does NOT run migrations.
+func VerifySchema(db *sql.DB) error {
+	goose.SetBaseFS(migrationsFS)
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return fmt.Errorf("goose dialect: %w", err)
+	}
+
+	entries, err := fs.ReadDir(migrationsFS, "migrations")
+	if err != nil {
+		return fmt.Errorf("read migrations dir: %w", err)
+	}
+
+	var maxVersion int64
+	for _, entry := range entries {
+		v, err := goose.NumericComponent(entry.Name())
+		if err == nil && v > maxVersion {
+			maxVersion = v
+		}
+	}
+
+	current, err := goose.GetDBVersion(db)
+	if err != nil {
+		return fmt.Errorf("get db version: %w", err)
+	}
+
+	if current < maxVersion {
+		return fmt.Errorf("schema has pending migrations (current: %d, latest: %d)", current, maxVersion)
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // SQLite repository adapter
 // ---------------------------------------------------------------------------
@@ -74,17 +109,17 @@ func NewSQLiteRepo(db *sql.DB) CatalogRepository {
 }
 
 // Products returns only approved (public) products.
-func (r *sqliteRepo) Products() []SanPhamSo {
+func (r *sqliteRepo) Products() ([]SanPhamSo, error) {
 	return queryApproved(r.db, CatalogQuery{})
 }
 
 // Search returns approved products filtered and sorted by the given query.
-func (r *sqliteRepo) Search(query CatalogQuery) []SanPhamSo {
+func (r *sqliteRepo) Search(query CatalogQuery) ([]SanPhamSo, error) {
 	return queryApproved(r.db, query)
 }
 
 // queryApproved returns approved products optionally filtered/sorted.
-func queryApproved(db *sql.DB, q CatalogQuery) []SanPhamSo {
+func queryApproved(db *sql.DB, q CatalogQuery) ([]SanPhamSo, error) {
 	var conditions []string
 	var args []any
 
@@ -143,23 +178,29 @@ func queryApproved(db *sql.DB, q CatalogQuery) []SanPhamSo {
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("query products: %w", err)
 	}
 	defer rows.Close()
 
 	// Scan all products first (closes rows before loading formats)
-	products, ids := scanProductIDs(rows)
+	products, ids, err := scanProductIDs(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan products: %w", err)
+	}
 	if len(products) == 0 {
-		return products
+		return products, nil
 	}
 
 	// Batch-load all formats for matched product IDs
-	formatMap := batchLoadDinhDang(db, ids)
+	formatMap, err := batchLoadDinhDang(db, ids)
+	if err != nil {
+		return nil, fmt.Errorf("load formats: %w", err)
+	}
 	for i := range products {
 		products[i].DinhDang = formatMap[products[i].ID]
 	}
 
-	return products
+	return products, nil
 }
 
 // buildOrderBy returns the ORDER BY clause for the given sort order.
@@ -183,7 +224,7 @@ func buildOrderBy(sortStr string) string {
 
 // scanProductIDs scans all rows and returns products along with their IDs.
 // This function does NOT execute any DB queries, avoiding MaxOpenConns deadlocks.
-func scanProductIDs(rows *sql.Rows) ([]SanPhamSo, []string) {
+func scanProductIDs(rows *sql.Rows) ([]SanPhamSo, []string, error) {
 	var result []SanPhamSo
 	var ids []string
 	for rows.Next() {
@@ -195,7 +236,7 @@ func scanProductIDs(rows *sql.Rows) ([]SanPhamSo, []string) {
 			&sp.DanhMuc, &sp.DiemDanhGia, &sp.SoLuongDanhGia,
 			&ngayTao, &sp.SoLuotTai, &sp.TrangThai,
 		); err != nil {
-			return nil, nil
+			return nil, nil, err
 		}
 		t, err := time.Parse(time.RFC3339, ngayTao)
 		if err != nil {
@@ -208,13 +249,13 @@ func scanProductIDs(rows *sql.Rows) ([]SanPhamSo, []string) {
 		result = append(result, sp)
 		ids = append(ids, sp.ID)
 	}
-	return result, ids
+	return result, ids, rows.Err()
 }
 
 // batchLoadDinhDang loads all product formats for the given product IDs in one query.
-func batchLoadDinhDang(db *sql.DB, ids []string) map[string][]string {
+func batchLoadDinhDang(db *sql.DB, ids []string) (map[string][]string, error) {
 	if len(ids) == 0 {
-		return nil
+		return nil, nil
 	}
 	// Build placeholders for IN clause
 	placeholders := make([]string, len(ids))
@@ -231,7 +272,7 @@ func batchLoadDinhDang(db *sql.DB, ids []string) map[string][]string {
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -239,9 +280,9 @@ func batchLoadDinhDang(db *sql.DB, ids []string) map[string][]string {
 	for rows.Next() {
 		var pid, ext string
 		if err := rows.Scan(&pid, &ext); err != nil {
-			return nil
+			return nil, err
 		}
 		result[pid] = append(result[pid], ext)
 	}
-	return result
+	return result, rows.Err()
 }
