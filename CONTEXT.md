@@ -11,6 +11,18 @@ _Avoid_: File, Gói tài nguyên số khi nói về đơn vị được đăng b
 **Tệp**:
 Một đơn vị dữ liệu kỹ thuật số thuộc về một Sản phẩm số; có thể là bản vẽ, mô hình, hình ảnh, tài liệu hoặc tệp định dạng nguồn.
 
+**Mô tả ngắn**: Nội dung tóm tắt giúp người mua nhanh chóng hiểu Sản phẩm số trong danh sách và phần đầu trang chi tiết.
+
+**Mô tả chi tiết**: Nội dung đầy đủ giải thích phạm vi, đặc điểm và thông tin sử dụng của Sản phẩm số; khác với Mô tả ngắn.
+
+**Giấy phép**: Thông tin công khai mô tả phạm vi quyền sử dụng đi kèm Sản phẩm số.
+
+**Đánh giá**: Dữ liệu tổng hợp từ các đánh giá của người mua, gồm điểm trung bình và số lượng đánh giá; việc tạo đánh giá thuộc luồng riêng.
+
+**Ngày đăng**: Thời điểm Sản phẩm số được duyệt và công khai trên sàn; khác với thời điểm Người bán cá nhân bắt đầu tạo sản phẩm.
+
+**Sản phẩm đề xuất**: Các Sản phẩm số công khai khác được hiển thị để hỗ trợ khám phá, không bao gồm Sản phẩm số hiện tại.
+
 **Người mua cá nhân**:
 Một cá nhân sử dụng sàn để tìm kiếm, mua hoặc tải Sản phẩm số cho nhu cầu cá nhân, học tập hoặc công việc.
 _Avoid_: Khách hàng doanh nghiệp khi nói về phạm vi người mua MVP.
