@@ -772,6 +772,26 @@ func (errRepo) ProductsByCategory(DanhMuc, string, int) ([]SanPhamSo, error) {
 	return nil, fmt.Errorf("simulated disk failure")
 }
 
+func (errRepo) DraftsBySeller(string) ([]SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+func (errRepo) DraftByID(string, string) (*SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+func (errRepo) CreateDraft(DraftInput, string) (*SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+func (errRepo) UpdateDraft(string, string, DraftUpdateInput) (*SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+func (errRepo) DeleteDraft(string, string) error {
+	return fmt.Errorf("simulated disk failure")
+}
+
 // recommendFailRepo is a CatalogRepository stub that succeeds for ProductByID
 // but returns errors for ProductsByCategory. Used to test resilient degrade.
 type recommendFailRepo struct {

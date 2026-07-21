@@ -8,6 +8,7 @@
           <template v-if="isLoggedIn">
             <span class="nav-user">{{ state.account?.ten || state.account?.email }}</span>
             <button @click="handleLogout" class="nav-link nav-btn">Đăng xuất</button>
+            <NuxtLink to="/seller" class="nav-link">Bản nháp</NuxtLink>
           </template>
           <template v-else>
             <NuxtLink to="/dang-nhap" class="nav-link nav-btn">Đăng nhập</NuxtLink>

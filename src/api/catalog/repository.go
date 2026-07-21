@@ -1,8 +1,10 @@
 package catalog
 
 import (
+	"fmt"
 	"sort"
 	"strings"
+	"time"
 	"unicode"
 
 	"golang.org/x/text/runes"
@@ -22,6 +24,16 @@ type CatalogRepository interface {
 	// excluding the given product ID, ordered by publish date descending
 	// (newest first) with ID tie-break, limited to max results.
 	ProductsByCategory(category DanhMuc, excludeID string, max int) ([]SanPhamSo, error)
+	// DraftsBySeller returns all drafts owned by the given seller.
+	DraftsBySeller(sellerID string) ([]SanPhamSo, error)
+	// DraftByID returns one draft by ID, scoped to the given seller.
+	DraftByID(id, sellerID string) (*SanPhamSo, error)
+	// CreateDraft creates a new draft product owned by the given seller.
+	CreateDraft(input DraftInput, sellerID string) (*SanPhamSo, error)
+	// UpdateDraft updates an existing draft, scoped to the seller.
+	UpdateDraft(id, sellerID string, input DraftUpdateInput) (*SanPhamSo, error)
+	// DeleteDraft deletes a draft by ID, scoped to the seller.
+	DeleteDraft(id, sellerID string) error
 }
 
 
@@ -213,6 +225,135 @@ func (r *memoryRepo) ProductsByCategory(category DanhMuc, excludeID string, max 
 	return result, nil
 }
 
+
+// ---------------------------------------------------------------------------
+// Memory repo: draft methods
+// ---------------------------------------------------------------------------
+
+func (r *memoryRepo) DraftsBySeller(sellerID string) ([]SanPhamSo, error) {
+	var result []SanPhamSo
+	for _, p := range r.products {
+		if p.NguoiBanID == sellerID && p.TrangThai == TrangThaiDangSoan {
+			result = append(result, p)
+		}
+	}
+	return result, nil
+}
+
+func (r *memoryRepo) DraftByID(id, sellerID string) (*SanPhamSo, error) {
+	for _, p := range r.products {
+		if p.ID == id && p.NguoiBanID == sellerID && p.TrangThai == TrangThaiDangSoan {
+			return &p, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *memoryRepo) CreateDraft(input DraftInput, sellerID string) (*SanPhamSo, error) {
+	id := fmt.Sprintf("draft_%d", time.Now().UnixNano())
+
+	var dinhDang []string
+	formatSet := make(map[string]bool)
+	for _, tep := range input.Tep {
+		if !formatSet[tep.DinhDang] {
+			dinhDang = append(dinhDang, tep.DinhDang)
+			formatSet[tep.DinhDang] = true
+		}
+	}
+
+	var tepList []Tep
+	for _, t := range input.Tep {
+		tepList = append(tepList, Tep{
+			TenTep:         t.TenTep,
+			DinhDang:       t.DinhDang,
+			DungLuongBytes: t.DungLuongBytes,
+		})
+	}
+
+	sp := SanPhamSo{
+		ID:        id,
+		Ten:       input.Ten,
+		MoTa:      input.MoTa,
+		MoTaChiTiet: input.MoTaChiTiet,
+		AnhDemo:   input.AnhDemo,
+		Gia: Gia{
+			MienPhi: input.MienPhi,
+			SoXu:    input.SoXu,
+		},
+		DanhMuc:  input.DanhMuc,
+		DinhDang: dinhDang,
+		GiayPhep: input.GiayPhep,
+		NgayTao:  time.Now(),
+		NguoiBanID: sellerID,
+		Tep:      tepList,
+		TrangThai: TrangThaiDangSoan,
+	}
+
+	r.products = append(r.products, sp)
+	return &sp, nil
+}
+
+func (r *memoryRepo) UpdateDraft(id, sellerID string, input DraftUpdateInput) (*SanPhamSo, error) {
+	for i, p := range r.products {
+		if p.ID == id && p.NguoiBanID == sellerID && p.TrangThai == TrangThaiDangSoan {
+			if input.Ten != nil {
+				r.products[i].Ten = *input.Ten
+			}
+			if input.MoTa != nil {
+				r.products[i].MoTa = *input.MoTa
+			}
+			if input.MoTaChiTiet != nil {
+				r.products[i].MoTaChiTiet = *input.MoTaChiTiet
+			}
+			if input.AnhDemo != nil {
+				r.products[i].AnhDemo = *input.AnhDemo
+			}
+			if input.MienPhi != nil {
+				r.products[i].Gia.MienPhi = *input.MienPhi
+			}
+			if input.SoXu != nil {
+				r.products[i].Gia.SoXu = *input.SoXu
+			}
+			if input.DanhMuc != nil {
+				r.products[i].DanhMuc = *input.DanhMuc
+			}
+			if input.GiayPhep != nil {
+				r.products[i].GiayPhep = *input.GiayPhep
+			}
+			if input.Tep != nil {
+				var tepList []Tep
+				var dinhDang []string
+				formatSet := make(map[string]bool)
+				for _, t := range input.Tep {
+					tepList = append(tepList, Tep{
+						TenTep:         t.TenTep,
+						DinhDang:       t.DinhDang,
+						DungLuongBytes: t.DungLuongBytes,
+					})
+					if !formatSet[t.DinhDang] {
+						dinhDang = append(dinhDang, t.DinhDang)
+						formatSet[t.DinhDang] = true
+					}
+				}
+				r.products[i].Tep = tepList
+				r.products[i].DinhDang = dinhDang
+			}
+			result := r.products[i]
+			return &result, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *memoryRepo) DeleteDraft(id, sellerID string) error {
+	for i, p := range r.products {
+		if p.ID == id && p.NguoiBanID == sellerID && p.TrangThai == TrangThaiDangSoan {
+			r.products = append(r.products[:i], r.products[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("không tìm thấy bản nháp")
+}
 // normalizeSearch normalizes Vietnamese text for case-insensitive, accent-insensitive matching.
 func normalizeSearch(s string) string {
 	// Step 1: NFD decompose so combining marks become separate codepoints

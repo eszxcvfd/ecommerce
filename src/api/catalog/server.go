@@ -22,6 +22,7 @@ func NewServer(addr string, repo CatalogRepository, db *sql.DB, checkReady func(
 	RegisterRoutes(mux, repo)
 	RegisterHealthRoutes(mux, checkReady)
 
+
 	return &Server{
 		httpServer: &http.Server{Addr: addr, Handler: mux},
 		db:         db,

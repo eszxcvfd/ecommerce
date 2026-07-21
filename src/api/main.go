@@ -66,7 +66,7 @@ func main() {
 	mux := http.NewServeMux()
 	catalog.RegisterRoutes(mux, catalogRepo)
 	catalog.RegisterHealthRoutes(mux, checkReady)
-	account.RegisterRoutes(mux, accountRepo)
+	catalog.RegisterSellerRoutes(mux, catalogRepo, accountRepo)
 
 	// Seed admin account for development
 	if env == catalog.AppEnvDevelopment {

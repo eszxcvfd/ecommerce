@@ -79,6 +79,40 @@ func (h *handler) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RequireAuth wraps a handler to require a valid session token.
+// It is exported so other modules (e.g. catalog) can protect their routes.
+func RequireAuth(repo AccountRepository) func(http.HandlerFunc) http.HandlerFunc {
+	h := &handler{repo: repo}
+	return h.requireAuth
+}
+
+// TaiKhoanIDFromContext extracts the authenticated account's ID from context.
+func TaiKhoanIDFromContext(ctx context.Context) string {
+	v, _ := ctx.Value(ContextKeyTaiKhoanID).(string)
+	return v
+}
+
+// VaiTroFromContext extracts the authenticated account's role from context.
+func VaiTroFromContext(ctx context.Context) string {
+	v, _ := ctx.Value(ContextKeyVaiTro).(string)
+	return v
+}
+
+// ExtractToken extracts the bearer token from Authorization header or session cookie.
+func ExtractToken(r *http.Request) string {
+	return extractToken(r)
+}
+
+// WriteAuthError writes an unauthorized JSON error response with WWW-Authenticate header.
+func WriteAuthError(w http.ResponseWriter, status int, code, message string) {
+	writeAuthError(w, status, code, message)
+}
+
+// WriteError writes a JSON error response.
+func WriteError(w http.ResponseWriter, status int, code, message string) {
+	writeError(w, status, code, message)
+}
+
 // extractToken extracts the bearer token from Authorization header or session cookie.
 func extractToken(r *http.Request) string {
 	// Check Authorization header first

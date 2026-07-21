@@ -137,6 +137,303 @@ func (r *sqliteRepo) ProductsByCategory(category DanhMuc, excludeID string, max 
 	return queryRecommendations(r.db, category, excludeID, max)
 }
 
+func (r *sqliteRepo) DraftsBySeller(sellerID string) ([]SanPhamSo, error) {
+	return queryDraftsBySeller(r.db, sellerID)
+}
+
+func (r *sqliteRepo) DraftByID(id, sellerID string) (*SanPhamSo, error) {
+	return queryDraftByID(r.db, id, sellerID)
+}
+
+func (r *sqliteRepo) CreateDraft(input DraftInput, sellerID string) (*SanPhamSo, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	id := newProductID()
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	_, err = tx.Exec(`
+		INSERT INTO san_pham_so (id, ten, mo_ta, mo_ta_chi_tiet, anh_demo, mien_phi, so_xu, danh_muc,
+		                         ngay_tao, trang_thai, giay_phep, nguoi_ban_hien_thi, nguoi_ban_id,
+		                         ten_search, mo_ta_search, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, '', ?, '', ?, datetime('now'), datetime('now'))
+	`, id, input.Ten, input.MoTa, input.MoTaChiTiet, input.AnhDemo,
+		boolToInt(input.MienPhi), input.SoXu, string(input.DanhMuc),
+		now, input.GiayPhep, sellerID,
+		normalizeSearch(input.Ten), normalizeSearch(input.MoTa))
+	if err != nil {
+		return nil, fmt.Errorf("insert draft: %w", err)
+	}
+
+	// Insert file entries
+	formatSet := make(map[string]bool)
+	for _, tep := range input.Tep {
+		_, err = tx.Exec(`
+			INSERT INTO san_pham_tep (san_pham_id, ten_tep, dinh_dang, dung_luong_bytes)
+			VALUES (?, ?, ?, ?)
+		`, id, tep.TenTep, tep.DinhDang, tep.DungLuongBytes)
+		if err != nil {
+			return nil, fmt.Errorf("insert file %s: %w", tep.TenTep, err)
+		}
+		if !formatSet[tep.DinhDang] {
+			formatSet[tep.DinhDang] = true
+			_, err = tx.Exec(`
+				INSERT INTO san_pham_dinh_dang (san_pham_id, dinh_dang)
+				VALUES (?, ?)
+			`, id, tep.DinhDang)
+			if err != nil {
+				return nil, fmt.Errorf("insert format %s: %w", tep.DinhDang, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit draft: %w", err)
+	}
+
+	return queryDraftByID(r.db, id, sellerID)
+}
+
+func (r *sqliteRepo) UpdateDraft(id, sellerID string, input DraftUpdateInput) (*SanPhamSo, error) {
+	// First verify ownership
+	existing, err := queryDraftByID(r.db, id, sellerID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	var sets []string
+	var args []any
+
+	if input.Ten != nil {
+		sets = append(sets, "ten = ?", "ten_search = ?")
+		args = append(args, *input.Ten, normalizeSearch(*input.Ten))
+	}
+	if input.MoTa != nil {
+		sets = append(sets, "mo_ta = ?", "mo_ta_search = ?")
+		args = append(args, *input.MoTa, normalizeSearch(*input.MoTa))
+	}
+	if input.MoTaChiTiet != nil {
+		sets = append(sets, "mo_ta_chi_tiet = ?")
+		args = append(args, *input.MoTaChiTiet)
+	}
+	if input.AnhDemo != nil {
+		sets = append(sets, "anh_demo = ?")
+		args = append(args, *input.AnhDemo)
+	}
+	if input.MienPhi != nil {
+		sets = append(sets, "mien_phi = ?")
+		args = append(args, boolToInt(*input.MienPhi))
+	}
+	if input.SoXu != nil {
+		sets = append(sets, "so_xu = ?")
+		args = append(args, *input.SoXu)
+	}
+	if input.DanhMuc != nil {
+		sets = append(sets, "danh_muc = ?")
+		args = append(args, string(*input.DanhMuc))
+	}
+	if input.GiayPhep != nil {
+		sets = append(sets, "giay_phep = ?")
+		args = append(args, *input.GiayPhep)
+	}
+
+	if len(sets) > 0 {
+		sets = append(sets, "updated_at = datetime('now')")
+		q := fmt.Sprintf("UPDATE san_pham_so SET %s WHERE id = ? AND nguoi_ban_id = ? AND trang_thai = 'draft'",
+			strings.Join(sets, ", "))
+		args = append(args, id, sellerID)
+		_, err = tx.Exec(q, args...)
+		if err != nil {
+			return nil, fmt.Errorf("update draft: %w", err)
+		}
+	}
+
+	// Replace files if provided
+	if input.Tep != nil {
+		_, err = tx.Exec("DELETE FROM san_pham_tep WHERE san_pham_id = ?", id)
+		if err != nil {
+			return nil, fmt.Errorf("delete old files: %w", err)
+		}
+		_, err = tx.Exec("DELETE FROM san_pham_dinh_dang WHERE san_pham_id = ?", id)
+		if err != nil {
+			return nil, fmt.Errorf("delete old formats: %w", err)
+		}
+
+		formatSet := make(map[string]bool)
+		for _, tep := range input.Tep {
+			_, err = tx.Exec(`
+				INSERT INTO san_pham_tep (san_pham_id, ten_tep, dinh_dang, dung_luong_bytes)
+				VALUES (?, ?, ?, ?)
+			`, id, tep.TenTep, tep.DinhDang, tep.DungLuongBytes)
+			if err != nil {
+				return nil, fmt.Errorf("insert file: %w", err)
+			}
+			if !formatSet[tep.DinhDang] {
+				formatSet[tep.DinhDang] = true
+				_, err = tx.Exec(`
+					INSERT INTO san_pham_dinh_dang (san_pham_id, dinh_dang)
+					VALUES (?, ?)
+				`, id, tep.DinhDang)
+				if err != nil {
+					return nil, fmt.Errorf("insert format: %w", err)
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit update: %w", err)
+	}
+
+	return queryDraftByID(r.db, id, sellerID)
+}
+
+func (r *sqliteRepo) DeleteDraft(id, sellerID string) error {
+	result, err := r.db.Exec(
+		"DELETE FROM san_pham_so WHERE id = ? AND nguoi_ban_id = ? AND trang_thai = 'draft'",
+		id, sellerID,
+	)
+	if err != nil {
+		return fmt.Errorf("delete draft: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("không tìm thấy bản nháp")
+	}
+	return nil
+}
+
+// queryDraftsBySeller returns all drafts owned by the given seller.
+func queryDraftsBySeller(db *sql.DB, sellerID string) ([]SanPhamSo, error) {
+	rows, err := db.Query(`
+		SELECT s.id, s.ten, s.mo_ta, s.mo_ta_chi_tiet, s.anh_demo,
+		       s.mien_phi, s.so_xu, s.danh_muc,
+		       s.diem_danh_gia, s.so_luong_danh_gia, s.ngay_tao,
+		       s.so_luot_tai, s.trang_thai,
+		       s.giay_phep, s.nguoi_ban_hien_thi, s.ngay_dang,
+		       s.nguoi_ban_id
+		FROM san_pham_so s
+		WHERE s.nguoi_ban_id = ? AND s.trang_thai = 'draft'
+		ORDER BY s.ngay_tao DESC
+	`, sellerID)
+	if err != nil {
+		return nil, fmt.Errorf("query drafts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanDrafts(rows, db)
+}
+
+// queryDraftByID returns one draft by ID, scoped to the seller.
+func queryDraftByID(db *sql.DB, id, sellerID string) (*SanPhamSo, error) {
+	var sp SanPhamSo
+	var ngayTao string
+	var ngayDang string
+	err := db.QueryRow(`
+		SELECT s.id, s.ten, s.mo_ta, s.mo_ta_chi_tiet, s.anh_demo,
+		       s.mien_phi, s.so_xu, s.danh_muc,
+		       s.diem_danh_gia, s.so_luong_danh_gia, s.ngay_tao,
+		       s.so_luot_tai, s.trang_thai,
+		       s.giay_phep, s.nguoi_ban_hien_thi, s.ngay_dang,
+		       s.nguoi_ban_id
+		FROM san_pham_so s
+		WHERE s.id = ? AND s.nguoi_ban_id = ? AND s.trang_thai = 'draft'
+	`, id, sellerID).Scan(
+		&sp.ID, &sp.Ten, &sp.MoTa, &sp.MoTaChiTiet, &sp.AnhDemo,
+		&sp.Gia.MienPhi, &sp.Gia.SoXu,
+		&sp.DanhMuc, &sp.DiemDanhGia, &sp.SoLuongDanhGia,
+		&ngayTao, &sp.SoLuotTai, &sp.TrangThai,
+		&sp.GiayPhep, &sp.NguoiBanHienThi, &ngayDang,
+		&sp.NguoiBanID,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query draft %s: %w", id, err)
+	}
+	t, _ := parseTime(ngayTao)
+	sp.NgayTao = t
+	if ngayDang != "" {
+		sp.NgayDang, _ = parseTime(ngayDang)
+	}
+
+	// Load formats
+	formatMap, _ := batchLoadDinhDang(db, []string{id})
+	sp.DinhDang = formatMap[id]
+
+	// Load files
+	files, _ := loadTep(db, id)
+	sp.Tep = files
+
+	return &sp, nil
+}
+
+// scanDrafts scans draft rows and loads format/file data.
+func scanDrafts(rows *sql.Rows, db *sql.DB) ([]SanPhamSo, error) {
+	var products []SanPhamSo
+	var ids []string
+	for rows.Next() {
+		var sp SanPhamSo
+		var ngayTao string
+		var ngayDang string
+		if err := rows.Scan(
+			&sp.ID, &sp.Ten, &sp.MoTa, &sp.MoTaChiTiet, &sp.AnhDemo,
+			&sp.Gia.MienPhi, &sp.Gia.SoXu,
+			&sp.DanhMuc, &sp.DiemDanhGia, &sp.SoLuongDanhGia,
+			&ngayTao, &sp.SoLuotTai, &sp.TrangThai,
+			&sp.GiayPhep, &sp.NguoiBanHienThi, &ngayDang,
+			&sp.NguoiBanID,
+		); err != nil {
+			return nil, fmt.Errorf("scan draft: %w", err)
+		}
+		t, _ := parseTime(ngayTao)
+		sp.NgayTao = t
+		if ngayDang != "" {
+			sp.NgayDang, _ = parseTime(ngayDang)
+		}
+		products = append(products, sp)
+		ids = append(ids, sp.ID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Batch-load formats
+	if len(ids) > 0 {
+		formatMap, err := batchLoadDinhDang(db, ids)
+		if err == nil {
+			for i := range products {
+				products[i].DinhDang = formatMap[products[i].ID]
+			}
+		}
+		// Load files per product
+		for i := range products {
+			files, _ := loadTep(db, products[i].ID)
+			products[i].Tep = files
+		}
+	}
+
+	return products, nil
+}
+
+// newProductID generates a unique product ID for drafts.
+func newProductID() string {
+	return fmt.Sprintf("sp_draft_%d", time.Now().UnixNano())
+}
+
 // queryProductApproved fetches a single approved product by ID.
 // Returns nil, nil if not found or not approved.
 func queryProductApproved(db *sql.DB, id string) (*SanPhamSo, error) {

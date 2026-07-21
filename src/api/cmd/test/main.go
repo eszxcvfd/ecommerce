@@ -51,6 +51,7 @@ func main() {
 	checkReady := func() error { return catalog.VerifySchema(db) }
 	catalog.RegisterHealthRoutes(mux, checkReady)
 	account.RegisterRoutes(mux, accountRepo)
+	catalog.RegisterSellerRoutes(mux, catalogRepo, accountRepo)
 
 	srv := catalog.NewServerWithHandler(":"+port, mux, db)
 
