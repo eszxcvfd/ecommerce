@@ -117,6 +117,7 @@ const {
   products, error, loaded,
 } = useCatalogSearch()
 
+const hasError = computed(() => !!error.value)
 const fullyLoaded = computed(() => danhMucList.value != null && danhMucList.value.length > 0)
 
 function retry() {

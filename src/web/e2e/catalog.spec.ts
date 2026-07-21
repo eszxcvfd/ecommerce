@@ -77,17 +77,22 @@ test.describe('Search and sort', () => {
   test('search empty state shows reset suggestion', async ({ page }) => {
     await expect(page.locator('[class*="product-card"]').first()).toBeVisible()
     
-    // Type a search and verify the input works
+    // Type a search that yields nothing
     const searchInput = page.locator('input[type="search"], input[placeholder*="tìm"]').first()
     await searchInput.click()
     await searchInput.fill('zzzzzzzzzzzzzzzzzzz')
     
-    // Verify input value was accepted
-    await expect(searchInput).toHaveValue('zzzzzzzzzzzzzzzzzzz')
+    // Wait for debounced API call with the search param
+    await page.waitForResponse(
+      resp => resp.url().includes('/api/v1/san-pham') && resp.url().includes('q=zzzzzzzzzzzzzzzzzzz'),
+      { timeout: 5000 },
+    )
     
-    // Wait for debounce + API, then verify results updated (cards may disappear or empty state appears)
-    await page.waitForTimeout(5000)
-    await expect(page.locator('[class*="product-card"]').first().or(page.locator('.catalog__empty'))).toBeVisible({ timeout: 5000 })
+    // After the API returns empty results, the empty state should appear
+    await expect(page.locator('.catalog__empty')).toBeVisible()
+    
+    // The reset link should be visible in empty state when a search is active
+    await expect(page.locator('.catalog__reset-link')).toBeVisible()
   })
 
   test('reset button clears search and filters', async ({ page }) => {
@@ -120,12 +125,16 @@ test.describe('Search and sort', () => {
   })
 
   test('URL is synced with search query', async ({ page }) => {
+    // Initial query params are read and trigger a filtered fetch
     await page.goto('/?q=nhà')
     await expect(page.locator('[class*="product-card"]').first()).toBeVisible()
     const cards = page.locator('[class*="product-card"]')
     expect(await cards.count()).toBeGreaterThanOrEqual(1)
+    // The URL retains the query param
+    await expect(page).toHaveURL(/.*\?q=/)
   })
 })
+
 test.describe('Product detail page', () => {
   test('shows product details for a free product', async ({ page }) => {
     await page.goto('/san-pham/sp-001')

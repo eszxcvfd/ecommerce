@@ -124,7 +124,10 @@ export function useCatalogSearch() {
 
   // Debounced search text
   const debouncedQ = ref(q.value)
-  let debounceTimer: number | undefined
+  watch(q, (val, _, onCleanup) => {
+    const timer = setTimeout(() => { debouncedQ.value = val }, 300)
+    onCleanup(() => clearTimeout(timer))
+  })
   // Fetch products — extracted so it can be called directly on refresh
   async function fetchProducts() {
     loading.value = true
@@ -133,7 +136,7 @@ export function useCatalogSearch() {
     const url = qs ? `/api/v1/san-pham?${qs}` : '/api/v1/san-pham'
     try {
       const res = await $fetch<SanPhamResponse>(url)
-      results.value = res.san_pham
+      results.value = res?.san_pham ?? []
     } catch (e) {
       error.value = e
       results.value = []
@@ -148,6 +151,16 @@ export function useCatalogSearch() {
     fetchProducts,
     { immediate: true },
   )
+
+  // Sync search state to URL
+  watch([q, danhMuc, dinhDang, sort], ([newQ, newDm, newDd, newSort]) => {
+    const query: Record<string, string> = {}
+    if (newQ) query.q = newQ
+    if (newDm) query.danh_muc = newDm
+    if (newDd) query.dinh_dang = newDd
+    if (newSort) query.sort = newSort
+    router.replace({ query })
+  })
 
   // Reset all filters
   function resetAll() {
