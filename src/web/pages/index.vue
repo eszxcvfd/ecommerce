@@ -82,7 +82,7 @@
     <section v-if="fullyLoaded && !hasError" class="catalog__products">
       <h2 class="catalog__section-title">Sản phẩm số</h2>
 
-      <div v-if="!loaded" class="catalog__loading">
+      <div v-if="loaded" class="catalog__loading">
         <p>Đang tải...</p>
       </div>
 
@@ -117,8 +117,7 @@ const {
   products, error, loaded,
 } = useCatalogSearch()
 
-const hasError = computed(() => !!error.value)
-const fullyLoaded = computed(() => danhMucList.value.length > 0)
+const fullyLoaded = computed(() => danhMucList.value != null && danhMucList.value.length > 0)
 
 function retry() {
   refresh()

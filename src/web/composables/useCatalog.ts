@@ -123,41 +123,33 @@ export function useCatalogSearch() {
   const error = ref<unknown>(null)
 
   // Debounced search text
-  const debouncedQ = refDebounced(q, 300)
-
-  // Fetch products when any filter changes
+  const debouncedQ = ref(q.value)
+  let debounceTimer: number | undefined
+  // Fetch products — extracted so it can be called directly on refresh
+  async function fetchProducts() {
+    loading.value = true
+    error.value = null
+    const qs = buildQueryString(debouncedQ.value, danhMuc.value, dinhDang.value, sort.value)
+    const url = qs ? `/api/v1/san-pham?${qs}` : '/api/v1/san-pham'
+    try {
+      const res = await $fetch<SanPhamResponse>(url)
+      results.value = res.san_pham
+    } catch (e) {
+      error.value = e
+      results.value = []
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  // Fetch on filter change
   watch(
     [debouncedQ, danhMuc, dinhDang, sort],
-    async ([newQ, newDm, newDd, newSort]) => {
-      loading.value = true
-      error.value = null
-
-      const qs = buildQueryString(newQ, newDm, newDd, newSort)
-      const url = qs ? `/api/v1/san-pham?${qs}` : '/api/v1/san-pham'
-
-      try {
-        const res = await $fetch<SanPhamResponse>(url)
-        results.value = res.san_pham
-      } catch (e) {
-        error.value = e
-        results.value = []
-      } finally {
-        loading.value = false
-      }
-    },
+    fetchProducts,
     { immediate: true },
   )
 
-  // Sync to URL
-  watch([q, danhMuc, dinhDang, sort], ([newQ, newDm, newDd, newSort]) => {
-    const query: Record<string, string> = {}
-    if (newQ) query.q = newQ
-    if (newDm) query.danh_muc = newDm
-    if (newDd) query.dinh_dang = newDd
-    if (newSort) query.sort = newSort
-    router.replace({ query })
-  })
-
+  // Reset all filters
   function resetAll() {
     q.value = ''
     danhMuc.value = ''
@@ -166,14 +158,16 @@ export function useCatalogSearch() {
   }
 
   return {
+    rawQ: q,
     q,
     danhMuc,
     dinhDang,
     sort,
-    results,
-    loading,
+    reset: resetAll,
+    refresh: fetchProducts,
+    products: results,
     error,
-    resetAll,
+    loaded: loading,
   }
 }
 
