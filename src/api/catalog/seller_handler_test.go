@@ -501,6 +501,192 @@ func TestSellerDraft_Update_Ownership(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Regression: update input validation
+// ---------------------------------------------------------------------------
+
+func TestSellerDraft_Update_EmptyName(t *testing.T) {
+	ts, _, _, token := setupSellerTestServer(t)
+
+	body, _ := json.Marshal(validDraftInput())
+	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/seller/san-pham", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create: expected 201, got %d", res.StatusCode)
+	}
+	var createResp map[string]SanPhamSo
+	json.NewDecoder(res.Body).Decode(&createResp)
+	draftID := createResp["san_pham"].ID
+
+	// Update with empty name — should be rejected
+	updateBody, _ := json.Marshal(map[string]string{"ten": ""})
+	req, _ = http.NewRequest("PUT", ts.URL+"/api/v1/seller/san-pham/"+draftID, bytes.NewReader(updateBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for empty name, got %d", res.StatusCode)
+	}
+}
+
+func TestSellerDraft_Update_InvalidCategory(t *testing.T) {
+	ts, _, _, token := setupSellerTestServer(t)
+
+	body, _ := json.Marshal(validDraftInput())
+	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/seller/san-pham", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create: expected 201, got %d", res.StatusCode)
+	}
+	var createResp map[string]SanPhamSo
+	json.NewDecoder(res.Body).Decode(&createResp)
+	draftID := createResp["san_pham"].ID
+
+	// Update with invalid category
+	cat := "không_tồn_tại"
+	updateBody, _ := json.Marshal(map[string]string{"danh_muc": cat})
+	req, _ = http.NewRequest("PUT", ts.URL+"/api/v1/seller/san-pham/"+draftID, bytes.NewReader(updateBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid category, got %d", res.StatusCode)
+	}
+}
+
+func TestSellerDraft_Update_NegativePrice(t *testing.T) {
+	ts, _, _, token := setupSellerTestServer(t)
+
+	body, _ := json.Marshal(validDraftInput())
+	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/seller/san-pham", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create: expected 201, got %d", res.StatusCode)
+	}
+	var createResp map[string]SanPhamSo
+	json.NewDecoder(res.Body).Decode(&createResp)
+	draftID := createResp["san_pham"].ID
+
+	// Update with negative price
+	updateBody, _ := json.Marshal(map[string]int64{"so_xu": -100})
+	req, _ = http.NewRequest("PUT", ts.URL+"/api/v1/seller/san-pham/"+draftID, bytes.NewReader(updateBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for negative price, got %d", res.StatusCode)
+	}
+}
+
+func TestSellerDraft_Update_EmptyFileList(t *testing.T) {
+	ts, _, _, token := setupSellerTestServer(t)
+
+	body, _ := json.Marshal(validDraftInput())
+	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/seller/san-pham", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create: expected 201, got %d", res.StatusCode)
+	}
+	var createResp map[string]SanPhamSo
+	json.NewDecoder(res.Body).Decode(&createResp)
+	draftID := createResp["san_pham"].ID
+
+	// Update with explicit empty file list — should be rejected
+	updateBody, _ := json.Marshal(map[string]interface{}{"tep": []interface{}{}})
+	req, _ = http.NewRequest("PUT", ts.URL+"/api/v1/seller/san-pham/"+draftID, bytes.NewReader(updateBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for empty file list, got %d", res.StatusCode)
+	}
+}
+
+func TestSellerDraft_Update_Partial_NoChanges(t *testing.T) {
+	// Sending just {} should succeed (valid no-op update)
+	ts, _, _, token := setupSellerTestServer(t)
+
+	body, _ := json.Marshal(validDraftInput())
+	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/seller/san-pham", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create: expected 201, got %d", res.StatusCode)
+	}
+	var createResp map[string]SanPhamSo
+	json.NewDecoder(res.Body).Decode(&createResp)
+	draftID := createResp["san_pham"].ID
+
+	// Empty update (no fields) — should succeed
+	updateBody, _ := json.Marshal(map[string]interface{}{})
+	req, _ = http.NewRequest("PUT", ts.URL+"/api/v1/seller/san-pham/"+draftID, bytes.NewReader(updateBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected 200 for empty update body, got %d", res.StatusCode)
+	}
+}
+
 func TestSellerDraft_Delete_Success(t *testing.T) {
 	ts, _, _, token := setupSellerTestServer(t)
 

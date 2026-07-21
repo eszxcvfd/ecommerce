@@ -199,3 +199,50 @@ func ValidateDraftInput(input DraftInput) error {
 	}
 	return nil
 }
+
+// ValidateDraftUpdateInput validates a partial draft update request.
+// Only explicitly provided fields (non-nil pointers) are validated.
+// An explicitly empty tep slice is rejected (at least one file required).
+func ValidateDraftUpdateInput(input DraftUpdateInput) error {
+	if input.Ten != nil && *input.Ten == "" {
+		return fmt.Errorf("tên sản phẩm không được để trống")
+	}
+	if input.DanhMuc != nil {
+		if *input.DanhMuc == "" {
+			return fmt.Errorf("danh mục không được để trống")
+		}
+		valid := false
+		for _, dm := range AllDanhMuc {
+			if *input.DanhMuc == dm {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("danh mục không hợp lệ: %s", *input.DanhMuc)
+		}
+	}
+	if input.SoXu != nil && *input.SoXu < 0 {
+		return fmt.Errorf("số xu không được âm")
+	}
+	// Validate provided file entries.
+	// An explicitly provided empty array (not nil) is rejected.
+	if input.Tep != nil && len(input.Tep) == 0 {
+		return fmt.Errorf("cần ít nhất một tệp")
+	}
+	for _, tep := range input.Tep {
+		if tep.TenTep == "" {
+			return fmt.Errorf("tên tệp là bắt buộc")
+		}
+		if tep.DinhDang == "" {
+			return fmt.Errorf("định dạng tệp là bắt buộc")
+		}
+		if tep.DungLuongBytes <= 0 {
+			return fmt.Errorf("dung lượng tệp phải lớn hơn 0")
+		}
+		if !IsFormatAllowed(tep.DinhDang) {
+			return fmt.Errorf("định dạng không được hỗ trợ: %s", tep.DinhDang)
+		}
+	}
+	return nil
+}

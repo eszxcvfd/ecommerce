@@ -131,24 +131,9 @@ func (h *sellerHandler) handleUpdateDraft(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Validate any provided file entries
-	for _, tep := range input.Tep {
-		if tep.TenTep == "" {
-			writeError(w, http.StatusBadRequest, "du_lieu_khong_hop_le", "Tên tệp là bắt buộc")
-			return
-		}
-		if tep.DinhDang == "" {
-			writeError(w, http.StatusBadRequest, "du_lieu_khong_hop_le", "Định dạng tệp là bắt buộc")
-			return
-		}
-		if tep.DungLuongBytes <= 0 {
-			writeError(w, http.StatusBadRequest, "du_lieu_khong_hop_le", "Dung lượng tệp phải lớn hơn 0")
-			return
-		}
-		if !IsFormatAllowed(tep.DinhDang) {
-			writeError(w, http.StatusBadRequest, "dinh_dang_khong_ho_tro", "Định dạng không được hỗ trợ: "+tep.DinhDang)
-			return
-		}
+	if err := ValidateDraftUpdateInput(input); err != nil {
+		writeError(w, http.StatusBadRequest, "du_lieu_khong_hop_le", err.Error())
+		return
 	}
 
 	sp, err := h.repo.UpdateDraft(id, taiKhoanID, input)
