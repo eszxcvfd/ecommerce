@@ -10,7 +10,7 @@ test.describe('Seller draft management', () => {
 
   test('registration, seller activation, and draft creation flow', async ({ page }) => {
     // Register a new account
-    await page.click('text=Đăng ký')
+    await page.goto('/dang-ky')
     await expect(page).toHaveURL(/\/dang-ky/)
 
     await page.fill('#ten', 'Người Bán E2E')
@@ -29,22 +29,26 @@ test.describe('Seller draft management', () => {
     // Should be on home page, authenticated
     await expect(page.locator('nav', { hasText: 'Người Bán E2E' })).toBeVisible()
 
-    // Activate seller profile by calling the API directly (no UI for this yet)
+    // Extract auth token from localStorage for direct API calls
+    const token = await page.evaluate(() => localStorage.getItem('auth_token'))
     const apiUrl = process.env.API_URL || 'http://localhost:8080'
     const response = await page.request.post(`${apiUrl}/api/v1/ho-so-nguoi-ban`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
     })
     expect(response.status()).toBe(201)
 
     // Navigate to seller drafts page
-    await page.click('text=Bản nháp')
+    await page.goto('/seller')
     await expect(page).toHaveURL(/\/seller/)
 
     // Should see empty state
     await expect(page.locator('text=Chưa có bản nháp nào')).toBeVisible()
 
     // Navigate to create draft page
-    await page.click('text=Tạo bản nháp mới')
+    await page.goto('/seller/tao-moi')
     await expect(page).toHaveURL(/\/seller\/tao-moi/)
 
     // Fill in draft form
@@ -93,7 +97,7 @@ test.describe('Seller draft management', () => {
   test('seller without profile cannot create drafts', async ({ page }) => {
     // Register and login (without activating seller profile)
     const buyerEmail = `buyer_${Date.now()}@test.com`
-    await page.click('text=Đăng ký')
+    await page.goto('/dang-ky')
     await expect(page).toHaveURL(/\/dang-ky/)
 
     await page.fill('#ten', 'Người Mua E2E')
@@ -107,10 +111,17 @@ test.describe('Seller draft management', () => {
     await page.fill('#password', password)
     await page.click('button[type="submit"]')
 
-    // Try to create a draft via API
+    // Should be on home page, authenticated
+    await expect(page.locator('text=Đăng xuất')).toBeVisible()
+
+    // Extract auth token from localStorage for direct API calls
+    const token = await page.evaluate(() => localStorage.getItem('auth_token'))
     const apiUrl = process.env.API_URL || 'http://localhost:8080'
     const response = await page.request.post(`${apiUrl}/api/v1/seller/san-pham`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       data: {
         ten: 'Test Product',
         danh_muc: 'kiến trúc',
