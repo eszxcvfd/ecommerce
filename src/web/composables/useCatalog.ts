@@ -186,6 +186,7 @@ export function useSanPhamDetail(id: string) {
   })
 
   const product = computed(() => data.value?.san_pham ?? null)
+  const recommendations = computed(() => data.value?.san_pham_de_xuat ?? [])
   const notFound = computed(() => {
     if (!error.value) return false
     const err = error.value
@@ -199,9 +200,9 @@ export function useSanPhamDetail(id: string) {
     }
     return false
   })
-
   return {
     product,
+    recommendations,
     error,
     loaded: computed(() => data.value !== null && data.value !== undefined),
     notFound,

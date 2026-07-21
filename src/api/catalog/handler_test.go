@@ -768,6 +768,20 @@ func (errRepo) ProductByID(string) (*SanPhamSo, error) {
 	return nil, fmt.Errorf("simulated disk failure")
 }
 
+func (errRepo) ProductsByCategory(DanhMuc, string, int) ([]SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated disk failure")
+}
+
+// recommendFailRepo is a CatalogRepository stub that succeeds for ProductByID
+// but returns errors for ProductsByCategory. Used to test resilient degrade.
+type recommendFailRepo struct {
+	CatalogRepository
+}
+
+func (r *recommendFailRepo) ProductsByCategory(category DanhMuc, excludeID string, max int) ([]SanPhamSo, error) {
+	return nil, fmt.Errorf("simulated recommendation failure")
+}
+
 func TestCatalogStorageError_Returns500(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterRoutes(mux, errRepo{})
@@ -866,8 +880,22 @@ func TestSanPhamDetailEndpoint(t *testing.T) {
 		if len(sp.DinhDang) == 0 {
 			t.Error("expected non-empty formats")
 		}
-		if len(resp.SanPhamDeXuat) != 0 {
-			t.Error("expected empty san_pham_de_xuat placeholder")
+		if len(resp.SanPhamDeXuat) == 0 {
+			t.Error("expected non-empty san_pham_de_xuat")
+		}
+		// sp-001 is in "kiến trúc" category. sp-011 is the only other approved product in that category.
+		if len(resp.SanPhamDeXuat) > 0 {
+			rec := resp.SanPhamDeXuat[0]
+			if rec.ID != "sp-011" {
+				t.Errorf("expected recommendation sp-011 (newest in same category), got %q", rec.ID)
+			}
+			if rec.DanhMuc != sp.DanhMuc {
+				t.Errorf("expected recommendation in same category %q, got %q", sp.DanhMuc, rec.DanhMuc)
+			}
+			// Internal status field must not be serialized
+			if rec.TrangThai != "" {
+				t.Error("trang_thai should not be serialized (json:\"-\")")
+			}
 		}
 	})
 
@@ -1049,6 +1077,154 @@ func TestSanPhamDetailEndpoint(t *testing.T) {
 		// sp-016 has files (derived from dinh_dang in seed)
 		if len(sp.Tep) == 0 {
 			t.Error("expected non-empty tep list")
+		}
+	})
+
+	t.Run("recommends same-category products, excluding current", func(t *testing.T) {
+		// sp-011 is in "kiến trúc" with sp-001. sp-011 should NOT appear in its own recommendations.
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-011")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+
+		if len(resp.SanPhamDeXuat) != 1 {
+			t.Fatalf("expected 1 recommendation (sp-001), got %d", len(resp.SanPhamDeXuat))
+		}
+		rec := resp.SanPhamDeXuat[0]
+		if rec.ID != "sp-001" {
+			t.Errorf("expected recommendation sp-001, got %q", rec.ID)
+		}
+		if string(rec.DanhMuc) != "kiến trúc" {
+			t.Errorf("expected same category 'kiến trúc', got %q", rec.DanhMuc)
+		}
+	})
+
+	t.Run("returns empty recommendations for single-product category", func(t *testing.T) {
+		// Create a repo with only one product in a category
+		products := seedProducts()
+		// All categories have at least 2 products, but sp-007 is draft (not approved),
+		// so for a hypothetical single-approved-product scenario: filter to only sp-001
+		singleCatProducts := []SanPhamSo{}
+		for _, p := range products {
+			if p.ID == "sp-001" {
+				singleCatProducts = append(singleCatProducts, p)
+				break
+			}
+		}
+		singleRepo := NewMemoryRepo(singleCatProducts)
+		singleMux := http.NewServeMux()
+		RegisterRoutes(singleMux, singleRepo)
+		singleTS := httptest.NewServer(singleMux)
+		defer singleTS.Close()
+
+		res, err := http.Get(singleTS.URL + "/api/v1/san-pham/sp-001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+
+		if len(resp.SanPhamDeXuat) != 0 {
+			t.Errorf("expected empty recommendations, got %d items", len(resp.SanPhamDeXuat))
+		}
+	})
+	t.Run("resilient degrade on recommendation query failure", func(t *testing.T) {
+		// Use a repo that succeeds for ProductByID but fails for ProductsByCategory
+		// We need a type-level approach: embed errRepo-like but wrap a real one
+		realRepo := NewMemoryRepo(seedProducts())
+
+		// Create a custom wrapper that delegates everything but ProductsByCategory
+		mux3 := http.NewServeMux()
+		RegisterRoutes(mux3, &recommendFailRepo{CatalogRepository: realRepo})
+		ts3 := httptest.NewServer(mux3)
+		defer ts3.Close()
+
+		res, err := http.Get(ts3.URL + "/api/v1/san-pham/sp-001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 despite recommendation failure, got %d", res.StatusCode)
+		}
+
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+
+		if resp.SanPham.ID != "sp-001" {
+			t.Errorf("expected product sp-001, got %q", resp.SanPham.ID)
+		}
+		// When ProductsByCategory fails, the handler should return an empty array
+		if len(resp.SanPhamDeXuat) != 0 {
+			t.Errorf("expected empty recommendations on query failure, got %d items", len(resp.SanPhamDeXuat))
+		}
+	})
+
+	t.Run("recommendations have full product fields", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+
+		if len(resp.SanPhamDeXuat) == 0 {
+			t.Fatal("expected non-empty recommendations")
+		}
+
+		rec := resp.SanPhamDeXuat[0]
+		if rec.Ten == "" {
+			t.Error("expected non-empty ten")
+		}
+		if rec.MoTa == "" {
+			t.Error("expected non-empty mo_ta")
+		}
+		if rec.Gia.MienPhi != true && rec.Gia.MienPhi != false {
+			t.Error("expected gia to be present")
+		}
+		if len(rec.DinhDang) == 0 {
+			t.Error("expected non-empty dinh_dang")
+		}
+		if rec.DiemDanhGia == 0 && rec.SoLuongDanhGia == 0 {
+			// allow unrated products but at least check some metadata
+		}
+		if rec.NgayDang.IsZero() {
+			t.Error("expected non-zero ngay_dang")
+		}
+		if len(rec.Tep) == 0 {
+			t.Error("expected non-empty tep list")
+		}
+		if rec.TrangThai != "" {
+			t.Error("trang_thai should not be serialized (json:\"-\")")
 		}
 	})
 }

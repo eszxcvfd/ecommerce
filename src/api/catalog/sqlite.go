@@ -131,6 +131,12 @@ func (r *sqliteRepo) ProductByID(id string) (*SanPhamSo, error) {
 	return queryProductApproved(r.db, id)
 }
 
+// ProductsByCategory returns approved products in the given category, excluding one ID.
+// Ordered by publish date descending (newest first) with ID tie-break, limited to max.
+func (r *sqliteRepo) ProductsByCategory(category DanhMuc, excludeID string, max int) ([]SanPhamSo, error) {
+	return queryRecommendations(r.db, category, excludeID, max)
+}
+
 // queryProductApproved fetches a single approved product by ID.
 // Returns nil, nil if not found or not approved.
 func queryProductApproved(db *sql.DB, id string) (*SanPhamSo, error) {
@@ -381,6 +387,58 @@ func loadTep(db *sql.DB, productID string) ([]Tep, error) {
 		result = append(result, f)
 	}
 	return result, rows.Err()
+}
+
+// queryRecommendations returns approved products in the given category, excluding one ID,
+// ordered by publish date descending with ID tie-break, limited to max.
+func queryRecommendations(db *sql.DB, category DanhMuc, excludeID string, max int) ([]SanPhamSo, error) {
+	query := fmt.Sprintf(`
+		SELECT s.id, s.ten, s.mo_ta, s.mo_ta_chi_tiet, s.anh_demo,
+		       s.mien_phi, s.so_xu, s.danh_muc,
+		       s.diem_danh_gia, s.so_luong_danh_gia, s.ngay_tao,
+		       s.so_luot_tai, s.trang_thai,
+		       s.giay_phep, s.nguoi_ban_hien_thi, s.ngay_dang
+		FROM san_pham_so s
+		WHERE s.trang_thai = 'approved'
+		  AND s.danh_muc = ?
+		  AND s.id != ?
+		ORDER BY s.ngay_dang DESC, s.id ASC
+		LIMIT ?
+	`)
+
+	rows, err := db.Query(query, string(category), excludeID, max)
+	if err != nil {
+		return nil, fmt.Errorf("query recommendations: %w", err)
+	}
+	defer rows.Close()
+
+	products, ids, err := scanProductIDs(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan recommendations: %w", err)
+	}
+	if len(products) == 0 {
+		return products, nil
+	}
+
+	// Batch-load formats
+	formatMap, err := batchLoadDinhDang(db, ids)
+	if err != nil {
+		return nil, fmt.Errorf("load recommendation formats: %w", err)
+	}
+	for i := range products {
+		products[i].DinhDang = formatMap[products[i].ID]
+	}
+
+	// Load files for each product
+	for i := range products {
+		files, err := loadTep(db, products[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("load files for %s: %w", products[i].ID, err)
+		}
+		products[i].Tep = files
+	}
+
+	return products, nil
 }
 
 // parseTime tries to parse a timestamp string, attempting RFC3339 first.

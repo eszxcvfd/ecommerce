@@ -127,6 +127,18 @@
           </div>
         </div>
       </div>
+
+      <!-- Recommended products section -->
+      <div v-if="recommendations.length > 0" class="product-detail__recommendations">
+        <h2 class="product-detail__recommendations-title">Sản phẩm đề xuất</h2>
+        <div class="product-detail__recommendations-grid">
+          <ProductCard
+            v-for="rec in recommendations"
+            :key="rec.id"
+            :product="rec"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -134,11 +146,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useSanPhamDetail } from '~/composables/useCatalog'
+import ProductCard from '~/components/ProductCard.vue'
 
 const route = useRoute()
 const id = computed(() => route.params.id as string)
 
-const { product, error, loaded, notFound, refresh } = useSanPhamDetail(id.value)
+const { product, recommendations, error, loaded, notFound, refresh } = useSanPhamDetail(id.value)
 
 const hasError = computed(() => !!error.value && !notFound.value)
 const fullyLoaded = computed(() => loaded.value)
@@ -478,5 +491,25 @@ function renderStars(rating: number): string {
 
 .product-detail__retry-btn:hover {
   background: #3a56d4;
+}
+
+/* ── Recommended products ── */
+.product-detail__recommendations {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.product-detail__recommendations-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #1e293b;
+}
+
+.product-detail__recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
 }
 </style>

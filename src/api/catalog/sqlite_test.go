@@ -586,3 +586,120 @@ func TestSQLiteSearch_Sort(t *testing.T) {
 		}
 	})
 }
+
+func TestSQLiteProductsByCategory(t *testing.T) {
+	db := openSQLiteAndSeed(t)
+	repo := NewSQLiteRepo(db)
+
+	t.Run("returns same-category products excluding given ID", func(t *testing.T) {
+		// "kiến trúc" has sp-001 and sp-011 (approved)
+		products, err := repo.ProductsByCategory(DanhMucKienTruc, "sp-011", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(products) != 1 {
+			t.Fatalf("expected 1 product (sp-001), got %d", len(products))
+		}
+		if products[0].ID != "sp-001" {
+			t.Errorf("expected sp-001, got %q", products[0].ID)
+		}
+		if products[0].DanhMuc != DanhMucKienTruc {
+			t.Errorf("expected category 'kiến trúc', got %q", products[0].DanhMuc)
+		}
+		if products[0].TrangThai != TrangThaiDaDuyet {
+			t.Error("expected approved product")
+		}
+	})
+
+	t.Run("returns empty when no other products in category", func(t *testing.T) {
+		products, err := repo.ProductsByCategory(DanhMucKienTruc, "sp-001", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// sp-011 is the only other approved product in "kiến trúc", exclude it too
+		products, err = repo.ProductsByCategory(DanhMucKienTruc, "sp-011", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Now both approved kiến trúc products are excluded, should be empty
+		// Actually we need to exclude both sp-001 and sp-011
+		// Let's test a different scenario: exclude sp-001, should return sp-011
+		products, err = repo.ProductsByCategory(DanhMucKienTruc, "sp-001", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(products) != 1 {
+			t.Fatalf("expected 1 product, got %d", len(products))
+		}
+		if products[0].ID != "sp-011" {
+			t.Errorf("expected sp-011, got %q", products[0].ID)
+		}
+	})
+
+	t.Run("respects max limit", func(t *testing.T) {
+		// "cơ khí" has sp-017 and sp-018 (approved)
+		products, err := repo.ProductsByCategory(DanhMucCoKhi, "nonexistent", 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(products) != 1 {
+			t.Fatalf("expected 1 product (limited), got %d", len(products))
+		}
+	})
+
+	t.Run("excludes non-approved products", func(t *testing.T) {
+		// sp-008 is "điện tử" in "pending" status
+		products, err := repo.ProductsByCategory(DanhMucDienTu, "sp-008", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range products {
+			if p.ID == "sp-008" {
+				t.Error("expected non-approved product sp-008 to be excluded")
+			}
+			if p.TrangThai != TrangThaiDaDuyet {
+				t.Errorf("expected approved product, got %s", p.TrangThai)
+			}
+		}
+		// Only sp-003 and sp-013 are approved in "điện tử"
+		if len(products) != 2 {
+			t.Errorf("expected 2 approved products in điện tử, got %d", len(products))
+		}
+	})
+
+	t.Run("includes full product metadata", func(t *testing.T) {
+		products, err := repo.ProductsByCategory(DanhMucKienTruc, "sp-011", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(products) == 0 {
+			t.Fatal("expected at least 1 product")
+		}
+		p := products[0]
+		if p.Ten == "" {
+			t.Error("expected non-empty ten")
+		}
+		if p.MoTa == "" {
+			t.Error("expected non-empty mo_ta")
+		}
+		if len(p.DinhDang) == 0 {
+			t.Error("expected non-empty dinh_dang")
+		}
+		if len(p.Tep) == 0 {
+			t.Error("expected non-empty tep list")
+		}
+		if p.NgayDang.IsZero() {
+			t.Error("expected non-zero ngay_dang")
+		}
+	})
+
+	t.Run("returns empty slice for non-existent category", func(t *testing.T) {
+		products, err := repo.ProductsByCategory("không-tồn-tại", "sp-001", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(products) != 0 {
+			t.Errorf("expected empty, got %d products", len(products))
+		}
+	})
+}

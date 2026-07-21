@@ -18,7 +18,12 @@ type CatalogRepository interface {
 	Search(query CatalogQuery) ([]SanPhamSo, error)
 	// ProductByID returns one approved product by its ID, or nil if not found or not public.
 	ProductByID(id string) (*SanPhamSo, error)
+	// ProductsByCategory returns approved products in the given category,
+	// excluding the given product ID, ordered by publish date descending
+	// (newest first) with ID tie-break, limited to max results.
+	ProductsByCategory(category DanhMuc, excludeID string, max int) ([]SanPhamSo, error)
 }
+
 
 // memoryRepo holds in-memory product data.
 type memoryRepo struct {
@@ -173,6 +178,39 @@ func (r *memoryRepo) Search(query CatalogQuery) ([]SanPhamSo, error) {
 	}
 
 	return candidates, nil
+}
+
+// ProductsByCategory returns approved products filtered by category, excluding one ID.
+// Results are ordered by ngay_dang DESC, id ASC, limited to max.
+func (r *memoryRepo) ProductsByCategory(category DanhMuc, excludeID string, max int) ([]SanPhamSo, error) {
+	var result []SanPhamSo
+	for _, p := range r.products {
+		if p.TrangThai != TrangThaiDaDuyet {
+			continue
+		}
+		if p.DanhMuc != category {
+			continue
+		}
+		if p.ID == excludeID {
+			continue
+		}
+		result = append(result, p)
+	}
+
+	// Sort by ngay_dang descending, then id ascending (stable tie-break)
+	sort.SliceStable(result, func(i, j int) bool {
+		if !result[i].NgayDang.Equal(result[j].NgayDang) {
+			return result[i].NgayDang.After(result[j].NgayDang)
+		}
+		return result[i].ID < result[j].ID
+	})
+
+	// Limit
+	if len(result) > max {
+		result = result[:max]
+	}
+
+	return result, nil
 }
 
 // normalizeSearch normalizes Vietnamese text for case-insensitive, accent-insensitive matching.

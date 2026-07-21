@@ -137,10 +137,17 @@ func (h *handler) handleSanPhamDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch same-category recommendations, excluding the current product.
+	// On error, degrade gracefully with an empty list.
+	recommendations, err := h.repo.ProductsByCategory(sp.DanhMuc, sp.ID, 4)
+	if err != nil {
+		recommendations = []SanPhamSo{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(SanPhamChiTietResponse{
 		SanPham:       *sp,
-		SanPhamDeXuat: []SanPhamSo{}, // placeholder for Issue #23
+		SanPhamDeXuat: recommendations,
 	})
 }
 
