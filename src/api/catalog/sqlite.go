@@ -136,18 +136,21 @@ func (r *sqliteRepo) ProductByID(id string) (*SanPhamSo, error) {
 func queryProductApproved(db *sql.DB, id string) (*SanPhamSo, error) {
 	var sp SanPhamSo
 	var ngayTao string
+	var ngayDang string
 	err := db.QueryRow(`
-		SELECT s.id, s.ten, s.mo_ta, s.anh_demo,
+		SELECT s.id, s.ten, s.mo_ta, s.mo_ta_chi_tiet, s.anh_demo,
 		       s.mien_phi, s.so_xu, s.danh_muc,
 		       s.diem_danh_gia, s.so_luong_danh_gia, s.ngay_tao,
-		       s.so_luot_tai, s.trang_thai
+		       s.so_luot_tai, s.trang_thai,
+		       s.giay_phep, s.nguoi_ban_hien_thi, s.ngay_dang
 		FROM san_pham_so s
 		WHERE s.id = ? AND s.trang_thai = 'approved'
 	`, id).Scan(
-		&sp.ID, &sp.Ten, &sp.MoTa, &sp.AnhDemo,
+		&sp.ID, &sp.Ten, &sp.MoTa, &sp.MoTaChiTiet, &sp.AnhDemo,
 		&sp.Gia.MienPhi, &sp.Gia.SoXu,
 		&sp.DanhMuc, &sp.DiemDanhGia, &sp.SoLuongDanhGia,
 		&ngayTao, &sp.SoLuotTai, &sp.TrangThai,
+		&sp.GiayPhep, &sp.NguoiBanHienThi, &ngayDang,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -155,14 +158,15 @@ func queryProductApproved(db *sql.DB, id string) (*SanPhamSo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query product %s: %w", id, err)
 	}
-	t, err := time.Parse(time.RFC3339, ngayTao)
+	t, err := parseTime(ngayTao)
 	if err != nil {
-		t, err = time.Parse("2006-01-02T15:04:05Z07:00", ngayTao)
-		if err != nil {
-			t = time.Time{}
-		}
+		t = time.Time{}
 	}
 	sp.NgayTao = t
+
+	if ngayDang != "" {
+		sp.NgayDang, _ = parseTime(ngayDang)
+	}
 
 	// Load formats
 	formatMap, err := batchLoadDinhDang(db, []string{id})
@@ -171,9 +175,15 @@ func queryProductApproved(db *sql.DB, id string) (*SanPhamSo, error) {
 	}
 	sp.DinhDang = formatMap[id]
 
+	// Load files
+	files, err := loadTep(db, id)
+	if err != nil {
+		return nil, fmt.Errorf("load files for %s: %w", id, err)
+	}
+	sp.Tep = files
+
 	return &sp, nil
 }
-
 
 // queryApproved returns approved products optionally filtered/sorted.
 func queryApproved(db *sql.DB, q CatalogQuery) ([]SanPhamSo, error) {
@@ -186,10 +196,6 @@ func queryApproved(db *sql.DB, q CatalogQuery) ([]SanPhamSo, error) {
 	// Text search
 	if q.Q != "" {
 		normalized := normalizeSearch(q.Q)
-		// ADR-0001 requires LIKE over normalized columns for accent-insensitive search.
-		// Both the stored search columns and the query are lowercased, stripped of
-		// combining marks, and have đ→d mapped, so LIKE '%q%' on the concatenated
-		// normalized text provides case/accent-insensitive substring matching.
 		conditions = append(conditions, "(s.ten_search || ' ' || s.mo_ta_search) LIKE '%' || ? || '%'")
 		args = append(args, normalized)
 	}
@@ -228,10 +234,11 @@ func queryApproved(db *sql.DB, q CatalogQuery) ([]SanPhamSo, error) {
 
 	// Build and execute main product query
 	query := fmt.Sprintf(`
-		SELECT s.id, s.ten, s.mo_ta, s.anh_demo,
+		SELECT s.id, s.ten, s.mo_ta, s.mo_ta_chi_tiet, s.anh_demo,
 		       s.mien_phi, s.so_xu, s.danh_muc,
 		       s.diem_danh_gia, s.so_luong_danh_gia, s.ngay_tao,
-		       s.so_luot_tai, s.trang_thai
+		       s.so_luot_tai, s.trang_thai,
+		       s.giay_phep, s.nguoi_ban_hien_thi, s.ngay_dang
 		FROM san_pham_so s
 		WHERE %s
 		%s
@@ -291,22 +298,26 @@ func scanProductIDs(rows *sql.Rows) ([]SanPhamSo, []string, error) {
 	for rows.Next() {
 		var sp SanPhamSo
 		var ngayTao string
+		var ngayDang string
 		if err := rows.Scan(
-			&sp.ID, &sp.Ten, &sp.MoTa, &sp.AnhDemo,
+			&sp.ID, &sp.Ten, &sp.MoTa, &sp.MoTaChiTiet, &sp.AnhDemo,
 			&sp.Gia.MienPhi, &sp.Gia.SoXu,
 			&sp.DanhMuc, &sp.DiemDanhGia, &sp.SoLuongDanhGia,
 			&ngayTao, &sp.SoLuotTai, &sp.TrangThai,
+			&sp.GiayPhep, &sp.NguoiBanHienThi, &ngayDang,
 		); err != nil {
 			return nil, nil, err
 		}
-		t, err := time.Parse(time.RFC3339, ngayTao)
+		t, err := parseTime(ngayTao)
 		if err != nil {
-			t, err = time.Parse("2006-01-02T15:04:05Z07:00", ngayTao)
-			if err != nil {
-				t = time.Time{}
-			}
+			t = time.Time{}
 		}
 		sp.NgayTao = t
+
+		if ngayDang != "" {
+			sp.NgayDang, _ = parseTime(ngayDang)
+		}
+
 		result = append(result, sp)
 		ids = append(ids, sp.ID)
 	}
@@ -318,7 +329,7 @@ func batchLoadDinhDang(db *sql.DB, ids []string) (map[string][]string, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	// Build placeholders for IN clause
+
 	placeholders := make([]string, len(ids))
 	args := make([]any, len(ids))
 	for i, id := range ids {
@@ -326,26 +337,59 @@ func batchLoadDinhDang(db *sql.DB, ids []string) (map[string][]string, error) {
 		args[i] = id
 	}
 
-	query := fmt.Sprintf(
-		"SELECT san_pham_id, dinh_dang FROM san_pham_dinh_dang WHERE san_pham_id IN (%s) ORDER BY san_pham_id, dinh_dang",
-		strings.Join(placeholders, ","),
+	rows, err := db.Query(
+		"SELECT san_pham_id, dinh_dang FROM san_pham_dinh_dang WHERE san_pham_id IN ("+strings.Join(placeholders, ",")+") ORDER BY san_pham_id, dinh_dang",
+		args...,
 	)
-
-	rows, err := db.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query formats: %w", err)
 	}
 	defer rows.Close()
 
-	result := make(map[string][]string)
+	result := make(map[string][]string, len(ids))
 	for rows.Next() {
 		var pid, ext string
 		if err := rows.Scan(&pid, &ext); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan format: %w", err)
 		}
 		result[pid] = append(result[pid], ext)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iter: %w", err)
+	}
+
+	return result, nil
+}
+
+// loadTep loads all file entries for a given product ID.
+func loadTep(db *sql.DB, productID string) ([]Tep, error) {
+	rows, err := db.Query(
+		`SELECT ten_tep, dinh_dang, dung_luong_bytes FROM san_pham_tep WHERE san_pham_id = ? ORDER BY ten_tep`,
+		productID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query files for %s: %w", productID, err)
+	}
+	defer rows.Close()
+
+	var result []Tep
+	for rows.Next() {
+		var f Tep
+		if err := rows.Scan(&f.TenTep, &f.DinhDang, &f.DungLuongBytes); err != nil {
+			return nil, fmt.Errorf("scan file: %w", err)
+		}
+		result = append(result, f)
+	}
 	return result, rows.Err()
+}
+
+// parseTime tries to parse a timestamp string, attempting RFC3339 first.
+func parseTime(s string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, s)
+	if err == nil {
+		return t, nil
+	}
+	return time.Parse("2006-01-02T15:04:05Z07:00", s)
 }
 
 // OpenSQLiteProd opens a SQLite database with production settings.
@@ -353,16 +397,12 @@ func batchLoadDinhDang(db *sql.DB, ids []string) (map[string][]string, error) {
 // that all embedded migrations have been applied (without running them).
 // This is the production counterpart of OpenSQLite (which auto-migrates).
 func OpenSQLiteProd(path string) (*sql.DB, error) {
-	// Ensure parent directory exists before opening the database file.
-	parent := filepath.Dir(path)
-	if err := os.MkdirAll(parent, 0755); err != nil {
-		return nil, fmt.Errorf("create database directory %s: %w", parent, err)
-	}
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite: %w", err)
+		return nil, fmt.Errorf("open sqlite %s: %w", path, err)
 	}
 
+	// Apply runtime PRAGMAs
 	pragmas := []struct {
 		stmt string
 		name string
@@ -378,12 +418,14 @@ func OpenSQLiteProd(path string) (*sql.DB, error) {
 			return nil, fmt.Errorf("set pragma %s: %w", p.name, err)
 		}
 	}
+
+	// Limit to one writer connection (matches production topology)
 	db.SetMaxOpenConns(1)
 
+	// Verify all migrations have been applied (verify only, no auto-migration)
 	if err := VerifySchema(db); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("verify schema: %w", err)
 	}
-
 	return db, nil
 }

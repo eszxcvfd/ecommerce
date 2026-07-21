@@ -9,6 +9,9 @@ import (
 // ImportCatalogJSON validates a versioned catalog JSON file and imports all
 // products into the given database in a single transaction (all-or-nothing).
 //
+// Legacy v1 data is accepted with sensible backfill (file metadata derived
+// from existing format list, publish date copied from creation date).
+//
 // When allowDuplicates is false, it rejects:
 //   - Duplicate IDs inside the input JSON.
 //   - IDs that already exist in the database.
@@ -55,26 +58,37 @@ func ImportCatalogJSON(db *sql.DB, data []byte, allowDuplicates bool) error {
 			return fmt.Errorf("convert %s: %w", cp.ID, err)
 		}
 
+		var ngayDangStr string
+		if !sp.NgayDang.IsZero() {
+			ngayDangStr = sp.NgayDang.Format(time.RFC3339)
+		}
+
 		if allowDuplicates {
 			_, err = tx.Exec(`
-				INSERT OR IGNORE INTO san_pham_so (id, ten, mo_ta, anh_demo, mien_phi, so_xu, danh_muc,
+				INSERT OR IGNORE INTO san_pham_so (id, ten, mo_ta, mo_ta_chi_tiet, anh_demo, mien_phi, so_xu, danh_muc,
 				                         diem_danh_gia, so_luong_danh_gia, ngay_tao, so_luot_tai, trang_thai,
+				                         giay_phep, nguoi_ban_hien_thi, ngay_dang,
 				                         ten_search, mo_ta_search)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, sp.ID, sp.Ten, sp.MoTa, sp.AnhDemo, boolToInt(sp.Gia.MienPhi), sp.Gia.SoXu,
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, sp.ID, sp.Ten, sp.MoTa, sp.MoTaChiTiet, sp.AnhDemo,
+				boolToInt(sp.Gia.MienPhi), sp.Gia.SoXu,
 				string(sp.DanhMuc), sp.DiemDanhGia, sp.SoLuongDanhGia,
 				sp.NgayTao.Format(time.RFC3339), sp.SoLuotTai, string(sp.TrangThai),
+				sp.GiayPhep, sp.NguoiBanHienThi, ngayDangStr,
 				normalizeSearch(sp.Ten), normalizeSearch(sp.MoTa),
 			)
 		} else {
 			_, err = tx.Exec(`
-				INSERT INTO san_pham_so (id, ten, mo_ta, anh_demo, mien_phi, so_xu, danh_muc,
+				INSERT INTO san_pham_so (id, ten, mo_ta, mo_ta_chi_tiet, anh_demo, mien_phi, so_xu, danh_muc,
 				                         diem_danh_gia, so_luong_danh_gia, ngay_tao, so_luot_tai, trang_thai,
+				                         giay_phep, nguoi_ban_hien_thi, ngay_dang,
 				                         ten_search, mo_ta_search)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, sp.ID, sp.Ten, sp.MoTa, sp.AnhDemo, boolToInt(sp.Gia.MienPhi), sp.Gia.SoXu,
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, sp.ID, sp.Ten, sp.MoTa, sp.MoTaChiTiet, sp.AnhDemo,
+				boolToInt(sp.Gia.MienPhi), sp.Gia.SoXu,
 				string(sp.DanhMuc), sp.DiemDanhGia, sp.SoLuongDanhGia,
 				sp.NgayTao.Format(time.RFC3339), sp.SoLuotTai, string(sp.TrangThai),
+				sp.GiayPhep, sp.NguoiBanHienThi, ngayDangStr,
 				normalizeSearch(sp.Ten), normalizeSearch(sp.MoTa),
 			)
 		}
@@ -82,6 +96,7 @@ func ImportCatalogJSON(db *sql.DB, data []byte, allowDuplicates bool) error {
 			return fmt.Errorf("import %s: %w", sp.ID, err)
 		}
 
+		// Insert formats
 		for _, ext := range sp.DinhDang {
 			_, err := tx.Exec(
 				"INSERT OR IGNORE INTO san_pham_dinh_dang (san_pham_id, dinh_dang) VALUES (?, ?)",
@@ -89,6 +104,17 @@ func ImportCatalogJSON(db *sql.DB, data []byte, allowDuplicates bool) error {
 			)
 			if err != nil {
 				return fmt.Errorf("import format %s for %s: %w", ext, sp.ID, err)
+			}
+		}
+
+		// Insert file entries
+		for _, f := range sp.Tep {
+			_, err := tx.Exec(
+				"INSERT OR IGNORE INTO san_pham_tep (san_pham_id, ten_tep, dinh_dang, dung_luong_bytes) VALUES (?, ?, ?, ?)",
+				sp.ID, f.TenTep, f.DinhDang, f.DungLuongBytes,
+			)
+			if err != nil {
+				return fmt.Errorf("import file %s for %s: %w", f.TenTep, sp.ID, err)
 			}
 		}
 	}

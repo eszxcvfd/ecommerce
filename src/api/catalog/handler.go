@@ -56,9 +56,9 @@ func (h *handler) handleSanPham(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "storage_unavailable", "Không thể truy xuất dữ liệu. Vui lòng thử lại sau.")
 			return
 		}
-		formats := deriveFormats(allProducts)
+		validFormats := deriveFormats(allProducts)
 		valid := false
-		for _, f := range formats {
+		for _, f := range validFormats {
 			if f == query.DinhDang {
 				valid = true
 				break
@@ -89,20 +89,20 @@ func (h *handler) handleSanPham(w http.ResponseWriter, r *http.Request) {
 
 	// Parse and validate price range
 	if minStr := q.Get("min_xu"); minStr != "" {
-		minVal, err := strconv.ParseInt(minStr, 10, 64)
-		if err != nil || minVal < 0 {
+		v, err := strconv.ParseInt(minStr, 10, 64)
+		if err != nil || v < 0 {
 			writeError(w, http.StatusBadRequest, "invalid_filter", "min_xu không hợp lệ")
 			return
 		}
-		query.MinXu = &minVal
+		query.MinXu = &v
 	}
 	if maxStr := q.Get("max_xu"); maxStr != "" {
-		maxVal, err := strconv.ParseInt(maxStr, 10, 64)
-		if err != nil || maxVal < 0 {
+		v, err := strconv.ParseInt(maxStr, 10, 64)
+		if err != nil || v < 0 {
 			writeError(w, http.StatusBadRequest, "invalid_filter", "max_xu không hợp lệ")
 			return
 		}
-		query.MaxXu = &maxVal
+		query.MaxXu = &v
 	}
 
 	// Validate min_xu <= max_xu when both are present
@@ -138,7 +138,10 @@ func (h *handler) handleSanPhamDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sp)
+	json.NewEncoder(w).Encode(SanPhamChiTietResponse{
+		SanPham:       *sp,
+		SanPhamDeXuat: []SanPhamSo{}, // placeholder for Issue #23
+	})
 }
 
 func (h *handler) handleDinhDang(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +163,7 @@ func deriveFormats(products []SanPhamSo) []string {
 			seen[ext] = true
 		}
 	}
-	var result []string
+	result := make([]string, 0, len(seen))
 	for ext := range seen {
 		result = append(result, ext)
 	}

@@ -136,7 +136,7 @@ func TestSanPhamSoToCatalogProduct_RoundTrip(t *testing.T) {
 		Gia:     Gia{MienPhi: false, SoXu: 5000},
 		DanhMuc: DanhMucDoHoa, DinhDang: []string{"svg", "png"},
 		DiemDanhGia: 4.2, SoLuongDanhGia: 8,
-		NgayTao:   parseTime(t, "2026-07-04T00:00:00Z"),
+		NgayTao:   testParseTime(t, "2026-07-04T00:00:00Z"),
 		SoLuotTai: 310, TrangThai: TrangThaiDaDuyet,
 	}
 
@@ -209,7 +209,7 @@ func TestToSanPhamSo_RejectsInvalidTimestamp(t *testing.T) {
 	}
 }
 
-func parseTime(t *testing.T, s string) time.Time {
+func testParseTime(t *testing.T, s string) time.Time {
 	t.Helper()
 	ts, err := time.Parse(time.RFC3339, s)
 	if err != nil {

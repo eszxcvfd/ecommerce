@@ -3,6 +3,13 @@ package catalog
 
 import "time"
 
+// Tep represents a single file within a SanPhamSo.
+type Tep struct {
+	TenTep         string `json:"ten_tep"`
+	DinhDang       string `json:"dinh_dang"`
+	DungLuongBytes int64  `json:"dung_luong_bytes"`
+}
+
 // DanhMuc represents a product category.
 type DanhMuc string
 
@@ -44,18 +51,23 @@ type Gia struct {
 
 // SanPhamSo is a digital product listed on the marketplace.
 type SanPhamSo struct {
-	ID             string           `json:"id"`
-	Ten            string           `json:"ten"`
-	MoTa           string           `json:"mo_ta"`
-	AnhDemo        string           `json:"anh_demo"`
-	Gia            Gia              `json:"gia"`
-	DanhMuc        DanhMuc          `json:"danh_muc"`
-	DinhDang       []string         `json:"dinh_dang"`
-	DiemDanhGia    float64          `json:"diem_danh_gia"`
-	SoLuongDanhGia int              `json:"so_luong_danh_gia"`
-	NgayTao        time.Time        `json:"ngay_tao"`
-	SoLuotTai      int64            `json:"so_luot_tai"`
-	TrangThai      TrangThaiSanPham `json:"-"`
+	ID              string           `json:"id"`
+	Ten             string           `json:"ten"`
+	MoTa            string           `json:"mo_ta"`
+	MoTaChiTiet     string           `json:"mo_ta_chi_tiet"`
+	AnhDemo         string           `json:"anh_demo"`
+	Gia             Gia              `json:"gia"`
+	DanhMuc         DanhMuc          `json:"danh_muc"`
+	DinhDang        []string         `json:"dinh_dang"`
+	DiemDanhGia     float64          `json:"diem_danh_gia"`
+	SoLuongDanhGia  int              `json:"so_luong_danh_gia"`
+	NgayTao         time.Time        `json:"ngay_tao"`
+	NgayDang        time.Time        `json:"ngay_dang"`
+	SoLuotTai       int64            `json:"so_luot_tai"`
+	GiayPhep        string           `json:"giay_phep"`
+	NguoiBanHienThi string           `json:"nguoi_ban_hien_thi"`
+	Tep             []Tep            `json:"tep"`
+	TrangThai       TrangThaiSanPham `json:"-"`
 }
 
 // CatalogQuery carries all search/filter/sort parameters for the public catalog.
@@ -81,3 +93,9 @@ const (
 
 // ValidSortOrders lists all supported sort orders.
 var ValidSortOrders = []SortOrder{SortNewest, SortPopular, SortPriceAsc, SortPriceDesc, SortRating}
+
+// SanPhamChiTietResponse is the wrapped response for the product detail endpoint.
+type SanPhamChiTietResponse struct {
+	SanPham       SanPhamSo   `json:"san_pham"`
+	SanPhamDeXuat []SanPhamSo `json:"san_pham_de_xuat"`
+}

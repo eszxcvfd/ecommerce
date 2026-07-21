@@ -3,10 +3,17 @@ export interface Gia {
   so_xu?: number
 }
 
+export interface Tep {
+  ten_tep: string
+  dinh_dang: string
+  dung_luong_bytes: number
+}
+
 export interface SanPhamSo {
   id: string
   ten: string
   mo_ta: string
+  mo_ta_chi_tiet: string
   anh_demo: string
   gia: Gia
   danh_muc: string
@@ -14,7 +21,16 @@ export interface SanPhamSo {
   diem_danh_gia: number
   so_luong_danh_gia: number
   ngay_tao: string
+  ngay_dang: string
   so_luot_tai: number
+  giay_phep: string
+  nguoi_ban_hien_thi: string
+  tep: Tep[]
+}
+
+export interface SanPhamChiTietResponse {
+  san_pham: SanPhamSo
+  san_pham_de_xuat: SanPhamSo[]
 }
 
 interface DanhMucResponse {
@@ -30,9 +46,10 @@ interface SanPhamResponse {
 }
 
 export interface CatalogResult<T> {
-  data: Ref<T>
+  data: Ref<T | null>
   error: Ref<unknown>
   loaded: Ref<boolean>
+  refresh: () => Promise<void>
 }
 
 export interface CatalogSearchState {
@@ -40,17 +57,24 @@ export interface CatalogSearchState {
   danhMuc: Ref<string>
   dinhDang: Ref<string>
   sort: Ref<string>
+  results: Ref<SanPhamSo[]>
+  loading: Ref<boolean>
+  error: Ref<unknown>
 }
 
 /**
  * Fetch the list of all six categories.
  */
 export function useDanhMuc(): CatalogResult<string[]> {
-  const { data, error } = useFetch<DanhMucResponse>('/api/v1/danh-muc')
+  const { data, error, refresh } = useFetch<DanhMucResponse>('/api/v1/danh-muc', {
+    watch: false,
+  })
+
   return {
-    data: computed(() => data.value?.danh_muc ?? []),
+    data: computed(() => data.value?.danh_muc ?? null),
     error,
     loaded: computed(() => data.value !== null),
+    refresh,
   }
 }
 
@@ -58,11 +82,15 @@ export function useDanhMuc(): CatalogResult<string[]> {
  * Fetch the list of available formats.
  */
 export function useDinhDang(): CatalogResult<string[]> {
-  const { data, error } = useFetch<DinhDangResponse>('/api/v1/dinh-dang')
+  const { data, error, refresh } = useFetch<DinhDangResponse>('/api/v1/dinh-dang', {
+    watch: false,
+  })
+
   return {
-    data: computed(() => data.value?.dinh_dang ?? []),
+    data: computed(() => data.value?.dinh_dang ?? null),
     error,
     loaded: computed(() => data.value !== null),
+    refresh,
   }
 }
 
@@ -86,68 +114,66 @@ export function useCatalogSearch() {
   const route = useRoute()
   const router = useRouter()
 
-  // Initialize from URL query params
-  const rawQ = ref((route.query.q as string) || '')
+  const q = ref(decodeURIComponent((route.query.q as string) || ''))
   const danhMuc = ref((route.query.danh_muc as string) || '')
   const dinhDang = ref((route.query.dinh_dang as string) || '')
   const sort = ref((route.query.sort as string) || '')
+  const results = ref<SanPhamSo[]>([])
+  const loading = ref(false)
+  const error = ref<unknown>(null)
 
-  // Debounced search text (delayed 250ms)
-  const q = ref(rawQ.value)
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null
-  watch(rawQ, (val) => {
-    if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-      q.value = val
-    }, 250)
+  // Debounced search text
+  const debouncedQ = refDebounced(q, 300)
+
+  // Fetch products when any filter changes
+  watch(
+    [debouncedQ, danhMuc, dinhDang, sort],
+    async ([newQ, newDm, newDd, newSort]) => {
+      loading.value = true
+      error.value = null
+
+      const qs = buildQueryString(newQ, newDm, newDd, newSort)
+      const url = qs ? `/api/v1/san-pham?${qs}` : '/api/v1/san-pham'
+
+      try {
+        const res = await $fetch<SanPhamResponse>(url)
+        results.value = res.san_pham
+      } catch (e) {
+        error.value = e
+        results.value = []
+      } finally {
+        loading.value = false
+      }
+    },
+    { immediate: true },
+  )
+
+  // Sync to URL
+  watch([q, danhMuc, dinhDang, sort], ([newQ, newDm, newDd, newSort]) => {
+    const query: Record<string, string> = {}
+    if (newQ) query.q = newQ
+    if (newDm) query.danh_muc = newDm
+    if (newDd) query.dinh_dang = newDd
+    if (newSort) query.sort = newSort
+    router.replace({ query })
   })
 
-  // Sync state to URL
-  function syncUrl() {
-    const params: Record<string, string> = {}
-    if (q.value) params.q = q.value
-    if (danhMuc.value) params.danh_muc = danhMuc.value
-    if (dinhDang.value) params.dinh_dang = dinhDang.value
-    if (sort.value) params.sort = sort.value
-    router.replace({ query: params })
-  }
-
-  watch([q, danhMuc, dinhDang, sort], () => { syncUrl() })
-
-  function reset() {
-    rawQ.value = ''
+  function resetAll() {
     q.value = ''
     danhMuc.value = ''
     dinhDang.value = ''
     sort.value = ''
   }
 
-  // Build API URL reactively
-  const apiUrl = computed(() => {
-    const qs = buildQueryString(q.value, danhMuc.value, dinhDang.value, sort.value)
-    return `/api/v1/san-pham${qs ? '?' + qs : ''}`
-  })
-
-  // Fetch products
-  const { data, error, refresh } = useFetch<SanPhamResponse>(apiUrl, { watch: false })
-
-  // Re-fetch when URL changes
-  watch(apiUrl, () => { refresh() })
-
   return {
-    // Search state
-    rawQ,
     q,
     danhMuc,
     dinhDang,
     sort,
-    reset,
-    // Results
-    products: computed(() => data.value?.san_pham ?? []),
+    results,
+    loading,
     error,
-    loaded: computed(() => data.value !== null),
-    // Re-fetch trigger
-    refresh,
+    resetAll,
   }
 }
 
@@ -155,28 +181,30 @@ export function useCatalogSearch() {
  * Fetch a single product by ID from the detail API.
  */
 export function useSanPhamDetail(id: string) {
-  const { data, error, refresh } = useFetch<SanPhamSo>(`/api/v1/san-pham/${id}`, {
+  const { data, error, refresh } = useFetch<SanPhamChiTietResponse>(`/api/v1/san-pham/${id}`, {
     watch: false,
   })
 
+  const product = computed(() => data.value?.san_pham ?? null)
+  const notFound = computed(() => {
+    if (!error.value) return false
+    const err = error.value
+    if (err && typeof err === 'object' && 'statusCode' in err) {
+      const withCode = err as Record<string, unknown>
+      return typeof withCode.statusCode === 'number' && withCode.statusCode === 404
+    }
+    if (err && typeof err === 'object' && 'status' in err) {
+      const withStatus = err as Record<string, unknown>
+      return typeof withStatus.status === 'number' && withStatus.status === 404
+    }
+    return false
+  })
+
   return {
-    product: data,
+    product,
     error,
     loaded: computed(() => data.value !== null && data.value !== undefined),
-    notFound: computed(() => {
-      // 404 from API returns empty/error body — detect via error
-      if (!error.value) return false
-      const err = error.value
-      if (err && typeof err === 'object' && 'statusCode' in err) {
-        const withCode = err as Record<string, unknown>
-        return typeof withCode.statusCode === 'number' && withCode.statusCode === 404
-      }
-      if (err && typeof err === 'object' && 'status' in err) {
-        const withStatus = err as Record<string, unknown>
-        return typeof withStatus.status === 'number' && withStatus.status === 404
-      }
-      return false
-    }),
+    notFound,
     refresh,
   }
 }

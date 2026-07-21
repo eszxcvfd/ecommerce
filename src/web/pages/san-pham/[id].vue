@@ -40,11 +40,22 @@
           <h1 class="product-detail__title">{{ product.ten }}</h1>
 
           <p v-if="product.mo_ta" class="product-detail__description">{{ product.mo_ta }}</p>
+
+          <!-- Detailed description (only when present) -->
+          <div v-if="product.mo_ta_chi_tiet" class="product-detail__description-detailed">
+            <p class="product-detail__description-detailed-text">{{ product.mo_ta_chi_tiet }}</p>
+          </div>
+
           <div class="product-detail__price">
             <span v-if="product.gia.mien_phi" class="product-detail__price-free">Miễn phí</span>
             <span v-else class="product-detail__price-paid">
               {{ formatPrice(product.gia.so_xu || 0) }} <span class="product-detail__xu-label">Xu</span>
             </span>
+          </div>
+
+          <!-- License (only when set) -->
+          <div v-if="product.giay_phep" class="product-detail__license">
+            <span class="product-detail__license-label">{{ product.giay_phep }}</span>
           </div>
 
           <!-- Rating -->
@@ -53,6 +64,13 @@
             <span class="product-detail__rating-count">
               ({{ product.so_luong_danh_gia }} đánh giá)
             </span>
+          </div>
+
+          <!-- Dates: creation + publish (if present) -->
+          <div class="product-detail__dates">
+            <span class="product-detail__date">Đăng ngày {{ formatDate(product.ngay_tao) }}</span>
+            <span v-if="product.ngay_dang" class="product-detail__date-separator"> • </span>
+            <span v-if="product.ngay_dang" class="product-detail__publish-date">Công bố ngày {{ formatDate(product.ngay_dang) }}</span>
           </div>
 
           <!-- Download count -->
@@ -70,6 +88,32 @@
                 class="format-badge"
               >{{ fmt.toUpperCase() }}</span>
             </div>
+          </div>
+
+          <!-- File table (only when files exist) -->
+          <div v-if="product.tep && product.tep.length" class="product-detail__file-table">
+            <h3 class="product-detail__file-table-title">Danh sách tệp</h3>
+            <table class="product-detail__file-table-content">
+              <thead>
+                <tr>
+                  <th>Tên tệp</th>
+                  <th>Định dạng</th>
+                  <th>Dung lượng</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(file, idx) in product.tep" :key="idx">
+                  <td class="product-detail__file-name">{{ file.ten_tep }}</td>
+                  <td><span class="format-badge">{{ file.dinh_dang.toUpperCase() }}</span></td>
+                  <td class="product-detail__file-size">{{ formatFileSize(file.dung_luong_bytes) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Seller line (only when set) -->
+          <div v-if="product.nguoi_ban_hien_thi" class="product-detail__seller">
+            <span>Người đăng: {{ product.nguoi_ban_hien_thi }}</span>
           </div>
 
           <!-- Action -->
@@ -103,6 +147,25 @@ function formatPrice(xu: number): string {
   return xu.toLocaleString('vi-VN')
 }
 
+function formatDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('vi-VN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const k = 1024
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const size = parseFloat((bytes / Math.pow(k, i)).toFixed(i > 0 ? 1 : 0))
+  return `${size.toLocaleString('vi-VN')} ${units[i]}`
+}
+
 function renderStars(rating: number): string {
   const full = Math.floor(rating)
   const half = rating - full >= 0.5 ? 1 : 0
@@ -114,218 +177,306 @@ function renderStars(rating: number): string {
 .product-detail {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 24px 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #1a1a2e;
 }
 
 .product-detail__loading,
 .product-detail__not-found,
 .product-detail__error {
   text-align: center;
-  padding: 4rem 1rem;
-  color: var(--color-text-secondary);
-}
-
-.product-detail__not-found h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--color-text);
+  padding: 48px 16px;
 }
 
 .product-detail__back-link {
   display: inline-block;
-  margin-top: 1rem;
-  color: var(--color-accent);
-  font-size: 0.95rem;
+  margin-bottom: 16px;
+  color: #4361ee;
+  text-decoration: none;
+  font-weight: 500;
 }
 
-.product-detail__retry-btn {
-  margin-top: 0.75rem;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-accent);
-  background: transparent;
-  color: var(--color-accent);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.9rem;
+.product-detail__back-link:hover {
+  text-decoration: underline;
 }
 
 .product-detail__main {
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  gap: 32px;
+  flex-wrap: wrap;
 }
 
-@media (min-width: 768px) {
-  .product-detail__main {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-}
-
-/* Image */
 .product-detail__image {
-  flex: 0 0 auto;
-  width: 100%;
-  max-width: 400px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--color-surface);
-  box-shadow: var(--shadow);
+  flex: 0 0 380px;
+  max-width: 100%;
 }
 
 .product-detail__image img {
   width: 100%;
   height: auto;
-  display: block;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .product-detail__image-placeholder {
   width: 100%;
   aspect-ratio: 4 / 3;
+  background: #f0f0f5;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  font-size: 3rem;
-  font-weight: 700;
+  color: #999;
+  font-size: 14px;
 }
 
-/* Info */
 .product-detail__info {
   flex: 1;
-  min-width: 0;
+  min-width: 280px;
 }
 
 .product-detail__category {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  background: var(--color-bg);
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.75rem;
+  padding: 4px 10px;
+  background: #eef0ff;
+  color: #4361ee;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
 .product-detail__title {
-  font-size: 1.75rem;
+  font-size: 24px;
   font-weight: 700;
+  margin: 0 0 12px;
   line-height: 1.3;
-  margin-bottom: 1rem;
 }
 
 .product-detail__description {
-  color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: 15px;
   line-height: 1.6;
-  margin-bottom: 1.5rem;
+  color: #444;
+  margin: 0 0 16px;
 }
 
-/* Price */
+.product-detail__description-detailed {
+  background: #f8f9ff;
+  border-left: 3px solid #4361ee;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 0 8px 8px 0;
+}
+
+.product-detail__description-detailed-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+  margin: 0;
+  white-space: pre-line;
+}
+
 .product-detail__price {
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
 }
 
 .product-detail__price-free {
-  display: inline-block;
-  padding: 0.35rem 1rem;
-  border-radius: 8px;
-  background: var(--color-free);
-  color: white;
-  font-weight: 600;
-  font-size: 1rem;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2ec4b6;
 }
 
 .product-detail__price-paid {
-  display: inline-block;
-  font-size: 1.5rem;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--color-paid);
+  color: #e63946;
 }
 
 .product-detail__xu-label {
-  font-size: 1rem;
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+}
+
+.product-detail__license {
+  margin-bottom: 12px;
+}
+
+.product-detail__license-label {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 500;
 }
 
-/* Rating */
 .product-detail__rating {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 8px;
 }
 
 .product-detail__stars {
-  color: var(--color-star);
-  font-size: 1.1rem;
+  color: #f59e0b;
+  font-size: 18px;
+  letter-spacing: 2px;
 }
 
 .product-detail__rating-count {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  font-size: 13px;
+  color: #666;
+  margin-left: 4px;
 }
 
-/* Downloads */
+.product-detail__dates {
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+.product-detail__date {
+  white-space: nowrap;
+}
+
+.product-detail__date-separator {
+  color: #ccc;
+}
+
 .product-detail__downloads {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 1.25rem;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 16px;
 }
 
-/* Formats */
 .product-detail__formats {
-  margin-bottom: 1.5rem;
+  margin-bottom: 16px;
 }
 
 .product-detail__formats-title {
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--color-text-secondary);
+  margin: 0 0 8px;
 }
 
 .product-detail__formats-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 6px;
 }
 
 .format-badge {
   display: inline-block;
-  padding: 0.3rem 0.75rem;
-  border-radius: 6px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  font-size: 0.8rem;
+  padding: 3px 10px;
+  background: #eef0ff;
+  color: #4361ee;
+  border-radius: 4px;
+  font-size: 12px;
   font-weight: 600;
   font-family: monospace;
-  color: var(--color-text-secondary);
 }
 
-/* Action */
+.product-detail__file-table {
+  margin-bottom: 16px;
+}
+
+.product-detail__file-table-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.product-detail__file-table-content {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.product-detail__file-table-content th {
+  text-align: left;
+  padding: 8px 12px;
+  background: #f5f5fa;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #e0e0e8;
+}
+
+.product-detail__file-table-content td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.product-detail__file-table-content tr:last-child td {
+  border-bottom: none;
+}
+
+.product-detail__file-name {
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.product-detail__file-size {
+  color: #666;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.product-detail__seller {
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #555;
+}
+
+.product-detail__seller span {
+  font-weight: 500;
+}
+
 .product-detail__action {
-  margin-top: 1rem;
+  margin-top: 20px;
 }
 
 .product-detail__action-btn {
   display: inline-block;
-  padding: 0.75rem 2rem;
+  padding: 12px 32px;
   border-radius: 8px;
+  font-size: 16px;
   font-weight: 600;
-  font-size: 1rem;
-  cursor: default;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
 .product-detail__action-btn--free {
-  background: var(--color-free);
-  color: white;
+  background: #2ec4b6;
+  color: #fff;
+}
+
+.product-detail__action-btn--free:hover {
+  background: #25a99d;
 }
 
 .product-detail__action-btn--paid {
-  background: var(--color-accent);
-  color: white;
+  background: #e63946;
+  color: #fff;
+}
+
+.product-detail__action-btn--paid:hover {
+  background: #c1121f;
+}
+
+.product-detail__retry-btn {
+  padding: 8px 24px;
+  background: #4361ee;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.product-detail__retry-btn:hover {
+  background: #3a56d4;
 }
 </style>

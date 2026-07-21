@@ -849,10 +849,11 @@ func TestSanPhamDetailEndpoint(t *testing.T) {
 			t.Fatalf("expected 200, got %d", res.StatusCode)
 		}
 
-		var sp SanPhamSo
-		if err := json.NewDecoder(res.Body).Decode(&sp); err != nil {
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
 			t.Fatal(err)
 		}
+		sp := resp.SanPham
 		if sp.ID != "sp-001" {
 			t.Errorf("expected id sp-001, got %q", sp.ID)
 		}
@@ -864,6 +865,9 @@ func TestSanPhamDetailEndpoint(t *testing.T) {
 		}
 		if len(sp.DinhDang) == 0 {
 			t.Error("expected non-empty formats")
+		}
+		if len(resp.SanPhamDeXuat) != 0 {
+			t.Error("expected empty san_pham_de_xuat placeholder")
 		}
 	})
 
@@ -878,10 +882,11 @@ func TestSanPhamDetailEndpoint(t *testing.T) {
 			t.Fatalf("expected 200, got %d", res.StatusCode)
 		}
 
-		var sp SanPhamSo
-		if err := json.NewDecoder(res.Body).Decode(&sp); err != nil {
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
 			t.Fatal(err)
 		}
+		sp := resp.SanPham
 		if sp.ID != "sp-017" {
 			t.Errorf("expected id sp-017, got %q", sp.ID)
 		}
@@ -977,6 +982,73 @@ func TestSanPhamDetailEndpoint(t *testing.T) {
 		}
 		if body["error"] != "storage_unavailable" {
 			t.Errorf("expected error 'storage_unavailable', got %q", body["error"])
+		}
+	})
+
+	t.Run("returns new metadata fields", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-003")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		sp := resp.SanPham
+
+		if sp.MoTaChiTiet == "" {
+			t.Error("expected non-empty mo_ta_chi_tiet")
+		}
+		if sp.GiayPhep == "" {
+			t.Error("expected non-empty giay_phep")
+		}
+		if sp.NguoiBanHienThi == "" {
+			t.Error("expected non-empty nguoi_ban_hien_thi")
+		}
+		if sp.NgayDang.IsZero() {
+			t.Error("expected non-zero ngay_dang for approved product")
+		}
+		if len(sp.Tep) == 0 {
+			t.Error("expected non-empty tep list")
+		}
+	})
+
+	t.Run("returns empty optional fields as zero values", func(t *testing.T) {
+		res, err := http.Get(ts.URL + "/api/v1/san-pham/sp-016")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+
+		var resp SanPhamChiTietResponse
+		if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		sp := resp.SanPham
+
+		// sp-016 has no license, no seller name, no detailed description
+		if sp.GiayPhep != "" {
+			t.Errorf("expected empty giay_phep, got %q", sp.GiayPhep)
+		}
+		if sp.NguoiBanHienThi != "" {
+			t.Errorf("expected empty nguoi_ban_hien_thi, got %q", sp.NguoiBanHienThi)
+		}
+		if sp.MoTaChiTiet != "" {
+			t.Errorf("expected empty mo_ta_chi_tiet, got %q", sp.MoTaChiTiet)
+		}
+		// sp-016 has files (derived from dinh_dang in seed)
+		if len(sp.Tep) == 0 {
+			t.Error("expected non-empty tep list")
 		}
 	})
 }

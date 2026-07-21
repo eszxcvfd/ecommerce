@@ -1,10 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "products": [
     {
       "id": "sp-001",
       "ten": "Bản vẽ nhà phố 3 tầng",
       "mo_ta": "Bản vẽ kiến trúc nhà phố 3 tầng, bao gồm mặt bằng, mặt đứng, mặt cắt.",
+      "mo_ta_chi_tiet": "Bộ bản vẽ đầy đủ cho nhà phố 3 tầng phong cách hiện đại, bao gồm:\n- Mặt bằng các tầng (trệt, lầu 1, lầu 2, sân thượng)\n- Mặt đứng trước và sau\n- Mặt cắt dọc và ngang\n- Bản vẽ kết cấu móng\n- Bản vẽ chi tiết cầu thang và vệ sinh\n\nPhù hợp cho kỹ sư xây dựng, sinh viên kiến trúc tham khảo và thi công thực tế.",
       "anh_demo": "/images/nha-pho.jpg",
       "gia": {
         "mien_phi": true
@@ -14,16 +15,37 @@
         "dwg",
         "pdf"
       ],
+      "tep": [
+        {
+          "ten_tep": "MB-TangTret.dwg",
+          "dinh_dang": "dwg",
+          "dung_luong_bytes": 2500000
+        },
+        {
+          "ten_tep": "MatDung.dwg",
+          "dinh_dang": "dwg",
+          "dung_luong_bytes": 1800000
+        },
+        {
+          "ten_tep": "ThuyetMinh.pdf",
+          "dinh_dang": "pdf",
+          "dung_luong_bytes": 1200000
+        }
+      ],
       "diem_danh_gia": 4.5,
       "so_luong_danh_gia": 12,
       "ngay_tao": "2026-07-01T00:00:00Z",
+      "ngay_dang": "2026-07-05T00:00:00Z",
       "so_luot_tai": 120,
+      "giay_phep": "Giấy phép Sử dụng Cá nhân - Cho phép tải về và sử dụng cho dự án cá nhân. Không được đăng tải lại hoặc bán lại.",
+      "nguoi_ban_hien_thi": "Kiến Trúc Sư Nguyễn Văn A",
       "trang_thai": "approved"
     },
     {
       "id": "sp-017",
       "ten": "Mẫu vách CNC đồng tiền hiện đại",
       "mo_ta": "Mẫu vách CNC trang trí nội thất với hoa văn đồng tiền hiện đại, tệp DXF.",
+      "mo_ta_chi_tiet": "Mẫu vách CNC trang trí nội thất phong cách hiện đại với họa tiết đồng tiền cách điệu. Sản phẩm gồm:\n- File DXF tương thích với hầu hết máy CNC\n- Hướng dẫn gia công cơ bản\n- Kích thước: 1200x800mm\n\nPhù hợp trang trí phòng khách, sảnh chờ, quán cà phê.",
       "anh_demo": "https://www.filethietke.vn/FilesUpload/Code/mau-vach-cnc-dong-tien-hien-dai-16434.jpg",
       "gia": {
         "mien_phi": false,
@@ -33,16 +55,27 @@
       "dinh_dang": [
         "dxf"
       ],
+      "tep": [
+        {
+          "ten_tep": "Vach-CNC-DongTien.dxf",
+          "dinh_dang": "dxf",
+          "dung_luong_bytes": 500000
+        }
+      ],
       "diem_danh_gia": 5,
       "so_luong_danh_gia": 0,
       "ngay_tao": "2026-07-02T00:00:00Z",
+      "ngay_dang": "2026-07-06T00:00:00Z",
       "so_luot_tai": 45,
+      "giay_phep": "Giấy phép Sử dụng Thương mại - Cho phép sử dụng trong dự án thương mại, không được bán lại file gốc.",
+      "nguoi_ban_hien_thi": "Xưởng CNC Hoàng Gia",
       "trang_thai": "approved"
     },
     {
       "id": "sp-003",
       "ten": "Sơ đồ mạch Arduino điều khiển LED",
       "mo_ta": "Sơ đồ nguyên lý và bố trí bo mạch Arduino cho dự án điều khiển LED RGB.",
+      "mo_ta_chi_tiet": "Dự án Arduino điều khiển LED RGB qua Bluetooth, gồm:\n- Sơ đồ nguyên lý mạch điều khiển\n- File PCB layout (Eagle)\n- Danh sách linh kiện BOM\n- Code Arduino mẫu\n\nDễ dàng chế tạo tại nhà với linh kiện phổ thông. Phù hợp cho sinh viên điện tử, người mới học Arduino.",
       "anh_demo": "/images/arduino-led.jpg",
       "gia": {
         "mien_phi": true
@@ -52,16 +85,37 @@
         "brd",
         "sch"
       ],
+      "tep": [
+        {
+          "ten_tep": "Arduino-LED.brd",
+          "dinh_dang": "brd",
+          "dung_luong_bytes": 800000
+        },
+        {
+          "ten_tep": "Arduino-LED.sch",
+          "dinh_dang": "sch",
+          "dung_luong_bytes": 300000
+        },
+        {
+          "ten_tep": "BOM.txt",
+          "dinh_dang": "txt",
+          "dung_luong_bytes": 2048
+        }
+      ],
       "diem_danh_gia": 3.8,
       "so_luong_danh_gia": 5,
       "ngay_tao": "2026-07-03T00:00:00Z",
+      "ngay_dang": "2026-07-07T00:00:00Z",
       "so_luot_tai": 230,
+      "giay_phep": "Giấy phép Nguồn Mở MIT",
+      "nguoi_ban_hien_thi": "DIY Electronics",
       "trang_thai": "approved"
     },
     {
       "id": "sp-004",
       "ten": "Bộ icon phong cách tối giản",
       "mo_ta": "Bộ 200 icon phong cách tối giản, phù hợp cho web và ứng dụng di động.",
+      "mo_ta_chi_tiet": "Bộ 200 biểu tượng (icon) thiết kế theo phong cách tối giản hiện đại, phù hợp cho:\n- Trang web và landing page\n- Ứng dụng di động (iOS/Android)\n- Thuyết trình và tài liệu\n\nBao gồm các định dạng SVG, PNG (512px), AI (nguồn). Tất cả icon đã được tối ưu cho hiển thị trên màn hình retina.",
       "anh_demo": "/images/icon-set.jpg",
       "gia": {
         "mien_phi": false,
@@ -73,10 +127,30 @@
         "png",
         "ai"
       ],
+      "tep": [
+        {
+          "ten_tep": "Icons-Minimal.ai",
+          "dinh_dang": "ai",
+          "dung_luong_bytes": 3500000
+        },
+        {
+          "ten_tep": "Icons-SVG.zip",
+          "dinh_dang": "zip",
+          "dung_luong_bytes": 1500000
+        },
+        {
+          "ten_tep": "Icons-PNG.zip",
+          "dinh_dang": "zip",
+          "dung_luong_bytes": 8000000
+        }
+      ],
       "diem_danh_gia": 4.2,
       "so_luong_danh_gia": 8,
       "ngay_tao": "2026-07-04T00:00:00Z",
+      "ngay_dang": "2026-07-08T00:00:00Z",
       "so_luot_tai": 310,
+      "giay_phep": "Giấy phép Sử dụng Thương mại - Cho phép sử dụng trong dự án thương mại và cá nhân. Không được bán lại dưới dạng bộ icon.",
+      "nguoi_ban_hien_thi": "Design Studio",
       "trang_thai": "approved"
     },
     {
@@ -92,16 +166,32 @@
         "pdf",
         "dwg"
       ],
+      "tep": [
+        {
+          "ten_tep": "CauDam-BTCT.pdf",
+          "dinh_dang": "pdf",
+          "dung_luong_bytes": 3500000
+        },
+        {
+          "ten_tep": "BanVe-CauDam.dwg",
+          "dinh_dang": "dwg",
+          "dung_luong_bytes": 4200000
+        }
+      ],
       "diem_danh_gia": 0,
       "so_luong_danh_gia": 0,
       "ngay_tao": "2026-07-05T00:00:00Z",
+      "ngay_dang": "2026-07-09T00:00:00Z",
       "so_luot_tai": 89,
+      "giay_phep": "Giấy phép Tham khảo Học thuật - Sử dụng cho mục đích học tập, tham khảo. Không sử dụng cho thi công thực tế khi chưa có ý kiến kỹ sư.",
+      "nguoi_ban_hien_thi": "Sinh Viên Xây Dựng",
       "trang_thai": "approved"
     },
     {
       "id": "sp-006",
       "ten": "Luận văn thạc sĩ AI trong xây dựng",
       "mo_ta": "Luận văn thạc sĩ về ứng dụng trí tuệ nhân tạo trong quản lý dự án xây dựng.",
+      "mo_ta_chi_tiet": "Luận văn thạc sĩ chuyên ngành Quản lý Xây dựng, nghiên cứu ứng dụng Trí tuệ nhân tạo (AI) trong:\n- Dự đoán rủi ro tiến độ dự án\n- Tối ưu hóa phân bổ nguồn lực\n- Phát hiện sớm các vấn đề chất lượng\n\nBao gồm: toàn văn luận văn (PDF), file dữ liệu khảo sát (Excel), mã nguồn Python mẫu.",
       "anh_demo": "/images/luanvan-ai.jpg",
       "gia": {
         "mien_phi": false,
@@ -112,16 +202,32 @@
         "pdf",
         "docx"
       ],
+      "tep": [
+        {
+          "ten_tep": "LuanVan-AI-XayDung.pdf",
+          "dinh_dang": "pdf",
+          "dung_luong_bytes": 5000000
+        },
+        {
+          "ten_tep": "LuanVan-AI-XayDung.docx",
+          "dinh_dang": "docx",
+          "dung_luong_bytes": 2800000
+        }
+      ],
       "diem_danh_gia": 5,
       "so_luong_danh_gia": 3,
       "ngay_tao": "2026-07-06T00:00:00Z",
+      "ngay_dang": "2026-07-10T00:00:00Z",
       "so_luot_tai": 67,
+      "giay_phep": "Giấy phép Tham khảo Học thuật - Sử dụng cho mục đích nghiên cứu, trích dẫn học thuật. Vui lòng ghi nguồn khi sử dụng nội dung.",
+      "nguoi_ban_hien_thi": "Thạc sĩ Lê Văn B",
       "trang_thai": "approved"
     },
     {
       "id": "sp-011",
       "ten": "Phối cảnh khu nghỉ dưỡng",
       "mo_ta": "Phối cảnh 3D khu nghỉ dưỡng cao cấp, file SketchUp và hình ảnh render.",
+      "mo_ta_chi_tiet": "Phối cảnh 3D khu nghỉ dưỡng cao cấp ven biển, bao gồm:\n- Mô hình SketchUp đầy đủ (file SKP)\n- Ảnh render chất lượng cao (PNG)\n- Bố trí tổng thể khuôn viên\n- Chi tiết kiến trúc từng hạng mục\n\nDự án tham khảo cho kiến trúc sư và nhà đầu tư khu nghỉ dưỡng.",
       "anh_demo": "/images/khu-nghi-duong.jpg",
       "gia": {
         "mien_phi": false,
@@ -132,16 +238,37 @@
         "skp",
         "png"
       ],
+      "tep": [
+        {
+          "ten_tep": "KhuNghiDuong.skp",
+          "dinh_dang": "skp",
+          "dung_luong_bytes": 5000000
+        },
+        {
+          "ten_tep": "Render-MatTien.png",
+          "dinh_dang": "png",
+          "dung_luong_bytes": 3500000
+        },
+        {
+          "ten_tep": "Render-SanVuon.png",
+          "dinh_dang": "png",
+          "dung_luong_bytes": 2800000
+        }
+      ],
       "diem_danh_gia": 4,
       "so_luong_danh_gia": 7,
       "ngay_tao": "2026-07-07T00:00:00Z",
+      "ngay_dang": "2026-07-11T00:00:00Z",
       "so_luot_tai": 43,
+      "giay_phep": "Giấy phép Sử dụng Thương mại - Cho phép sử dụng mô hình trong dự án thương mại. Không được bán lại file gốc.",
+      "nguoi_ban_hien_thi": "Kiến Trúc Sư Trần Văn C",
       "trang_thai": "approved"
     },
     {
       "id": "sp-018",
       "ten": "Mẫu vách cổng CNC cây nghệ thuật",
       "mo_ta": "Mẫu vách cổng CNC thiết kế cây nghệ thuật, phù hợp trang trí sân vườn.",
+      "mo_ta_chi_tiet": "Mẫu vách cổng CNC với họa tiết cây nghệ thuật, phong cách thiên nhiên. Sản phẩm gồm:\n- File DXF tương thích máy CNC\n- File ảnh tham khảo JPG\n- Hướng dẫn gia công\n\nKích thước: 1800x1200mm. Phù hợp trang trí cổng sân vườn, tường rào biệt thự.",
       "anh_demo": "https://www.filethietke.vn/FilesUpload/Code/mau-vach-cong-cnc-cay-nghe-thuat-164126.jpg",
       "gia": {
         "mien_phi": false,
@@ -151,16 +278,27 @@
       "dinh_dang": [
         "dxf"
       ],
+      "tep": [
+        {
+          "ten_tep": "VachCong-CayNT.dxf",
+          "dinh_dang": "dxf",
+          "dung_luong_bytes": 750000
+        }
+      ],
       "diem_danh_gia": 5,
       "so_luong_danh_gia": 0,
       "ngay_tao": "2026-07-08T00:00:00Z",
+      "ngay_dang": "2026-07-12T00:00:00Z",
       "so_luot_tai": 32,
+      "giay_phep": "Giấy phép Sử dụng Thương mại",
+      "nguoi_ban_hien_thi": "Xưởng CNC Hoàng Gia",
       "trang_thai": "approved"
     },
     {
       "id": "sp-013",
       "ten": "Sơ đồ nguyên lý nguồn 5V",
       "mo_ta": "Sơ đồ nguyên lý mạch nguồn 5V ổn áp, bao gồm sơ đồ mạch in và danh sách linh kiện.",
+      "mo_ta_chi_tiet": "Thiết kế mạch nguồn 5V ổn áp dùng LM2596, phù hợp cho:\n- Dự án điện tử DIY\n- Nguồn cho vi điều khiển\n- Thí nghiệm điện tử cơ bản\n\nBao gồm sơ đồ nguyên lý, PCB layout, danh sách linh kiện chi tiết.",
       "anh_demo": "/images/nguon-5v.jpg",
       "gia": {
         "mien_phi": false,
@@ -171,16 +309,32 @@
         "pdf",
         "sch"
       ],
+      "tep": [
+        {
+          "ten_tep": "Nguon-5V-PCB.pdf",
+          "dinh_dang": "pdf",
+          "dung_luong_bytes": 900000
+        },
+        {
+          "ten_tep": "Nguon-5V.sch",
+          "dinh_dang": "sch",
+          "dung_luong_bytes": 250000
+        }
+      ],
       "diem_danh_gia": 0,
       "so_luong_danh_gia": 0,
       "ngay_tao": "2026-07-09T00:00:00Z",
+      "ngay_dang": "2026-07-13T00:00:00Z",
       "so_luot_tai": 156,
+      "giay_phep": "Giấy phép Nguồn Mở - Thiết kế mạch được công bố theo giấy phép nguồn mở, cho phép chế tạo và cải tiến.",
+      "nguoi_ban_hien_thi": "DIY Electronics",
       "trang_thai": "approved"
     },
     {
       "id": "sp-014",
       "ten": "Template thiết kế brochure",
       "mo_ta": "Template brochure đa năng cho doanh nghiệp, thiết kế chuyên nghiệp dễ chỉnh sửa.",
+      "mo_ta_chi_tiet": "Brochure template đa năng phù hợp cho doanh nghiệp ở nhiều lĩnh vực. Sản phẩm gồm:\n- File AI (Adobe Illustrator) nguồn, dễ dàng chỉnh sửa\n- File PSD (Photoshop) với layer đầy đủ\n- Hướng dẫn sử dụng font và màu sắc\n\nThiết kế theo phong cách hiện đại, tối giản, dễ tùy chỉnh theo thương hiệu riêng.",
       "anh_demo": "/images/brochure.jpg",
       "gia": {
         "mien_phi": true
@@ -190,16 +344,32 @@
         "ai",
         "psd"
       ],
+      "tep": [
+        {
+          "ten_tep": "Brochure-Template.ai",
+          "dinh_dang": "ai",
+          "dung_luong_bytes": 4500000
+        },
+        {
+          "ten_tep": "Brochure-Template.psd",
+          "dinh_dang": "psd",
+          "dung_luong_bytes": 12000000
+        }
+      ],
       "diem_danh_gia": 4.8,
       "so_luong_danh_gia": 15,
       "ngay_tao": "2026-07-10T00:00:00Z",
+      "ngay_dang": "2026-07-14T00:00:00Z",
       "so_luot_tai": 520,
+      "giay_phep": "Giấy phép Sử dụng Cá nhân và Thương mại - Cho phép sử dụng template cho dự án của bạn. Không được bán lại template dưới dạng file gốc.",
+      "nguoi_ban_hien_thi": "Design Studio",
       "trang_thai": "approved"
     },
     {
       "id": "sp-015",
       "ten": "Đồ án tốt nghiệp phần mềm quản lý thư viện",
       "mo_ta": "Đồ án tốt nghiệp xây dựng phần mềm quản lý thư viện, đầy đủ báo cáo và mã nguồn.",
+      "mo_ta_chi_tiet": "Đồ án tốt nghiệp hệ thống quản lý thư viện với các chức năng:\n- Quản lý sách, độc giả, mượn trả\n- Tìm kiếm và thống kê\n- Báo cáo doanh thu và tần suất mượn\n\nCông nghệ: C# .NET, SQL Server. Bao gồm báo cáo, mã nguồn, CSDL mẫu.",
       "anh_demo": "/images/qly-thu-vien.jpg",
       "gia": {
         "mien_phi": false,
@@ -209,10 +379,20 @@
       "dinh_dang": [
         "pdf"
       ],
+      "tep": [
+        {
+          "ten_tep": "DoAn-QLTV.pdf",
+          "dinh_dang": "pdf",
+          "dung_luong_bytes": 4500000
+        }
+      ],
       "diem_danh_gia": 3.5,
       "so_luong_danh_gia": 2,
       "ngay_tao": "2026-07-11T00:00:00Z",
+      "ngay_dang": "2026-07-15T00:00:00Z",
       "so_luot_tai": 78,
+      "giay_phep": "Giấy phép Tham khảo Học thuật - Sử dụng tham khảo cho đồ án, báo cáo. Không được nộp lại dưới dạng sản phẩm của mình.",
+      "nguoi_ban_hien_thi": "Sinh Viên CNTT",
       "trang_thai": "approved"
     },
     {
@@ -228,9 +408,22 @@
         "pdf",
         "docx"
       ],
+      "tep": [
+        {
+          "ten_tep": "LuanVan-KTXD.pdf",
+          "dinh_dang": "pdf",
+          "dung_luong_bytes": 3800000
+        },
+        {
+          "ten_tep": "LuanVan-KTXD.docx",
+          "dinh_dang": "docx",
+          "dung_luong_bytes": 2100000
+        }
+      ],
       "diem_danh_gia": 0,
       "so_luong_danh_gia": 0,
       "ngay_tao": "2026-07-12T00:00:00Z",
+      "ngay_dang": "2026-07-16T00:00:00Z",
       "so_luot_tai": 94,
       "trang_thai": "approved"
     },
