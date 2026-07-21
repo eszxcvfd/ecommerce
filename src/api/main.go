@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"ecommerce/api/account"
 	"ecommerce/api/catalog"
 
 	_ "modernc.org/sqlite"
@@ -52,8 +54,29 @@ func main() {
 		log.Printf("Production mode — database at %s", dbPath)
 	}
 
-	repo := catalog.NewSQLiteRepo(db)
-	srv := catalog.NewServer(":"+port, repo, db, checkReady)
+	// Run account module migrations
+	if err := account.RunMigrations(db); err != nil {
+		log.Fatalf("account migrations: %v", err)
+	}
+
+	catalogRepo := catalog.NewSQLiteRepo(db)
+	accountRepo := account.NewSQLiteRepo(db)
+
+	// Build mux with all module routes
+	mux := http.NewServeMux()
+	catalog.RegisterRoutes(mux, catalogRepo)
+	catalog.RegisterHealthRoutes(mux, checkReady)
+	account.RegisterRoutes(mux, accountRepo)
+
+	// Seed admin account for development
+	if env == catalog.AppEnvDevelopment {
+		if err := account.SeedAdmin(context.Background(), accountRepo); err != nil {
+			log.Printf("seed admin (non-fatal): %v", err)
+		}
+	}
+
+	// Create server with the pre-built mux
+	srv := catalog.NewServerWithHandler(":"+port, mux, db)
 
 	// Graceful shutdown on SIGINT/SIGTERM
 	quit := make(chan os.Signal, 1)

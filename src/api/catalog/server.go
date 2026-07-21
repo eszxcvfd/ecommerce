@@ -28,6 +28,16 @@ func NewServer(addr string, repo CatalogRepository, db *sql.DB, checkReady func(
 	}
 }
 
+// NewServerWithHandler creates a Server with the given pre-built HTTP handler (mux).
+// This is used when the caller wants to register routes from multiple modules.
+// The db parameter is optional (nil is allowed for testing without SQLite).
+func NewServerWithHandler(addr string, handler http.Handler, db *sql.DB) *Server {
+	return &Server{
+		httpServer: &http.Server{Addr: addr, Handler: handler},
+		db:         db,
+	}
+}
+
 // ListenAndServe starts the HTTP server and blocks until it fails.
 func (s *Server) ListenAndServe() error {
 	return s.httpServer.ListenAndServe()

@@ -1,4 +1,4 @@
-// Command test starts the catalog API with seeded data for E2E tests.
+// Command test starts the API with seeded data for E2E tests.
 // It uses a temporary SQLite database, runs migrations and seed data,
 // then starts an HTTP server on the configured port.
 //
@@ -8,10 +8,12 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
+	"ecommerce/api/account"
 	"ecommerce/api/catalog"
 
 	_ "modernc.org/sqlite"
@@ -30,14 +32,27 @@ func main() {
 		log.Fatalf("open SQLite: %v", err)
 	}
 
-	// Seed the database
+	// Seed the catalog database
 	if err := catalog.SeedSQLite(db); err != nil {
 		log.Fatalf("seed: %v", err)
 	}
 
-	repo := catalog.NewSQLiteRepo(db)
+	// Run account migrations
+	if err := account.RunMigrations(db); err != nil {
+		log.Fatalf("account migrations: %v", err)
+	}
+
+	catalogRepo := catalog.NewSQLiteRepo(db)
+	accountRepo := account.NewSQLiteRepo(db)
+
+	// Build mux with all module routes
+	mux := http.NewServeMux()
+	catalog.RegisterRoutes(mux, catalogRepo)
 	checkReady := func() error { return catalog.VerifySchema(db) }
-	srv := catalog.NewServer(":"+port, repo, db, checkReady)
+	catalog.RegisterHealthRoutes(mux, checkReady)
+	account.RegisterRoutes(mux, accountRepo)
+
+	srv := catalog.NewServerWithHandler(":"+port, mux, db)
 
 	log.Printf("Test API server listening on :%s (db=%s)", port, dbPath)
 	if err := srv.ListenAndServe(); err != nil {
